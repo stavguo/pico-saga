@@ -1,10 +1,11 @@
 local world
 local components
 local systems
+local noise_fn
 
 -- Map dimensions (FE4-like scale)
-MAP_WIDTH = 48
-MAP_HEIGHT = 32
+MAP_WIDTH = 96
+MAP_HEIGHT = 64
 
 -- Screen dimensions in tiles
 SCREEN_TILES_WIDTH = 16
@@ -15,11 +16,12 @@ function _init()
     components = init_components(world)
     systems = init_systems(world, components)
 
-    generate_terrain(world, components)
+    -- Initialize terrain renderer instead of generating entities
+    init_terrain_renderer()
 
     -- Create cursor
     local cursor = world.entity()
-    cursor += components.Position({ x = 0, y = 0 })
+    cursor += components.Position({ x = flr(MAP_WIDTH/2), y = flr(MAP_HEIGHT/2) })
     cursor += components.Cursor({})
 end
 
@@ -30,9 +32,14 @@ end
 
 function _draw()
     cls()
-    -- Draw all systems
-    systems.draw_terrain()
-    systems.draw_cursor()
-    -- Reset camera for any UI we might add later
-    -- camera(0, 0)
+    
+    -- Get cursor position
+    local cursor_ent = world.query({components.Cursor})[1]
+    if cursor_ent then
+        local pos = cursor_ent[components.Position]
+        -- Draw terrain based on cursor position
+        draw_terrain(pos.x, pos.y)
+        -- Draw cursor
+        spr(0, pos.x * 8, pos.y * 8)
+    end
 end

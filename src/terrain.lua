@@ -8,62 +8,91 @@ local TERRAIN_TYPES = {
     MOUNTAIN = { sprite = 7, cost = nil } -- impassable
 }
 
-function generate_terrain(world, components)
-    -- Generate random seed between 0 and 32767 (PICO-8's max)
-    local seed = flr(rnd(32767))
-    -- Clear file on startup by writing with "@" flag
+local current_seed = nil
+local noise_fn = nil
+
+-- Initialize with a seed
+function init_terrain_renderer()
+    current_seed = flr(rnd(32767))
     if not _seeds_initialized then
-        printh("", "fe4_seeds.txt", true) -- true = overwrite
+        printh("", "fe4_seeds.txt", true)
         _seeds_initialized = true
     end
-    -- Append new seed to file
     printh(
-        "Generated map with seed: " .. seed ..
+        "Generated map with seed: " .. current_seed ..
         " at " .. stat(93) .. ":" .. stat(94) .. ":" .. stat(95),
         "fe4_seeds.txt"
     )
-    local noise = os2d_noisefn(seed)
+    noise_fn = os2d_noisefn(current_seed)
+end
 
-    -- Configure detail layers for more natural terrain
+-- Get terrain type at any world position
+function get_terrain_at(x, y)
+    -- Skip if out of bounds
+    if x < 0 or x >= MAP_WIDTH or y < 0 or y >= MAP_HEIGHT then
+        return nil
+    end
+
+    local h = 0
     local layers = {
-        -- {uv_scale, weight}
-        -- { 1 / 32, 1 / 2 }, -- large features (equivalent to 1/32 in original)
-        { 1 / 16, 1 },     -- medium features (equivalent to 1/16 in original)
-        { 1 / 8,  1 / 2 }, -- small features (equivalent to 1/8 in original)
-        { 1 / 4,  1 / 4 }, -- detail (equivalent to 1/4 in original)
-        { 1 / 2,  1 / 8 }  -- detail (equivalent to 1/4 in original)
+        { 1 / 16, 1 },
+        { 1 / 8,  1 / 2 },
+        { 1 / 4,  1 / 4 },
+        { 1 / 2,  1 / 8 }
     }
+    
+    for l in all(layers) do
+        local scale, weight = unpack(l)
+        h += noise_fn(x * scale, y * scale) * weight
+    end
 
-    for y = 0, 32 do
-        for x = 0, 48 do
-            -- Accumulate height from multiple noise layers
-            local h = 0
-            for l in all(layers) do
-                local scale, weight = unpack(l)
-                h += noise(x * scale, y * scale) * weight
+    if h < -0.5 then
+        return TERRAIN_TYPES.DEEP_WATER
+    elseif h < -0.3 then
+        return TERRAIN_TYPES.WATER
+    elseif h < -0.1 then
+        return TERRAIN_TYPES.SAND
+    elseif h < 0.3 then
+        return TERRAIN_TYPES.PLAINS
+    elseif h < 0.6 then
+        return TERRAIN_TYPES.FOREST
+    elseif h < 0.8 then
+        return TERRAIN_TYPES.THICKET
+    else
+        return TERRAIN_TYPES.MOUNTAIN
+    end
+end
+
+-- Get visible tile coordinates based on cursor position
+function get_visible_tiles(cursor_x, cursor_y)
+    -- Calculate viewport bounds
+    local view_center_x = mid(SCREEN_TILES_WIDTH/2, 
+                             cursor_x, 
+                             MAP_WIDTH - SCREEN_TILES_WIDTH/2)
+    local view_center_y = mid(SCREEN_TILES_HEIGHT/2, 
+                             cursor_y, 
+                             MAP_HEIGHT - SCREEN_TILES_HEIGHT/2)
+
+    -- Calculate visible area bounds
+    local min_x = flr(max(0, view_center_x - SCREEN_TILES_WIDTH/2))
+    local max_x = flr(min(MAP_WIDTH-1, view_center_x + SCREEN_TILES_WIDTH/2))
+    local min_y = flr(max(0, view_center_y - SCREEN_TILES_HEIGHT/2))
+    local max_y = flr(min(MAP_HEIGHT-1, view_center_y + SCREEN_TILES_HEIGHT/2))
+
+    return min_x, max_x, min_y, max_y
+end
+
+-- Draw visible terrain
+function draw_terrain(cursor_x, cursor_y)
+    local min_x, max_x, min_y, max_y = get_visible_tiles(cursor_x, cursor_y)
+    
+    -- Draw all visible tiles
+    for y = min_y, max_y do
+        for x = min_x, max_x do
+            local terrain = get_terrain_at(x, y)
+            if terrain then
+                spr(terrain.sprite, x * 8, y * 8)
             end
-
-            local tile = world.entity()
-            tile += components.Position({ x = x, y = y })
-
-            local terrain_type
-            if h < -0.5 then
-                terrain_type = TERRAIN_TYPES.DEEP_WATER
-            elseif h < -0.3 then
-                terrain_type = TERRAIN_TYPES.WATER
-            elseif h < -0.1 then
-                terrain_type = TERRAIN_TYPES.SAND
-            elseif h < 0.3 then
-                terrain_type = TERRAIN_TYPES.PLAINS
-            elseif h < 0.6 then
-                terrain_type = TERRAIN_TYPES.FOREST
-            elseif h < 0.8 then
-                terrain_type = TERRAIN_TYPES.THICKET
-            else
-                terrain_type = TERRAIN_TYPES.MOUNTAIN
-            end
-
-            tile += components.Terrain(terrain_type)
         end
     end
 end
