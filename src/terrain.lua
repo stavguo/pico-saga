@@ -34,8 +34,8 @@ function generate_terrain(world, components)
         { 1 / 2,  1 / 8 }  -- detail (equivalent to 1/4 in original)
     }
 
-    for y = 0, 64 do
-        for x = 0, 96 do
+    for y = 0, 32 do
+        for x = 0, 48 do
             -- Accumulate height from multiple noise layers
             local h = 0
             for l in all(layers) do
