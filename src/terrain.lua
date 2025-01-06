@@ -35,10 +35,12 @@ function get_terrain_at(x, y)
 
     local h = 0
     local layers = {
-        { 1 / 16, 1 },
-        { 1 / 8,  1 / 2 },
-        { 1 / 4,  1 / 4 },
-        { 1 / 2,  1 / 8 }
+        -- Scale, weight
+        { 1 / 32, 1 },
+        { 1 / 16, 1 / 2 },
+        { 1 / 8,  1 / 4 },
+        { 1 / 4,  1 / 8 },
+        { 1 / 2,  1 / 16 }
     }
     
     for l in all(layers) do

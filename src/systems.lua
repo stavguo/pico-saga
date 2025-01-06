@@ -1,7 +1,7 @@
 function init_systems(world, components)
     local systems = {}
     
-    -- Move cursor system (updated to respect map bounds)
+    -- Move cursor system
     systems.move_cursor = world.system(
         { components.Position, components.Cursor },
         function(entity)
@@ -14,7 +14,7 @@ function init_systems(world, components)
         end
     )
     
-    -- Draw terrain system (unchanged)
+    -- Draw terrain system
     systems.draw_terrain = world.system(
         { components.Position, components.Terrain },
         function(entity)
@@ -33,7 +33,7 @@ function init_systems(world, components)
         end
     )
     
-    -- Draw cursor system (unchanged)
+    -- Draw cursor system
     systems.draw_cursor = world.system(
         { components.Position, components.Cursor },
         function(entity)
