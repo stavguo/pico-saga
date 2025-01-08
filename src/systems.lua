@@ -32,6 +32,24 @@ function init_systems(world, components)
             end
         end
     )
+
+    systems.draw_castles = world.system(
+        { components.Position, components.Castle },
+        function(entity)
+            local pos = entity[components.Position]
+            local sprite = entity[components.Castle].is_player and 8 or 9
+            
+            local cam_tile_x = flr(camera_x / 8)
+            local cam_tile_y = flr(camera_y / 8)
+            
+            if pos.x >= cam_tile_x - 1 and
+                pos.x <= cam_tile_x + SCREEN_TILES_WIDTH + 1 and
+                pos.y >= cam_tile_y - 1 and
+                pos.y <= cam_tile_y + SCREEN_TILES_HEIGHT + 1 then
+                spr(sprite, pos.x * 8, pos.y * 8)
+            end
+        end
+    )
     
     -- Draw cursor system
     systems.draw_cursor = world.system(

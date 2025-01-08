@@ -9,22 +9,26 @@ local TERRAIN_TYPES = {
 }
 
 local current_seed = nil
-local noise_fn = nil
+local terrain_noise_fn = nil
 
--- Initialize with a seed
-function init_terrain_renderer()
-    current_seed = flr(rnd(32767))
-    if not _seeds_initialized then
-        printh("", "fe4_seeds.txt", true)
-        _seeds_initialized = true
-    end
-    printh(
-        "Generated map with seed: " .. current_seed ..
-        " at " .. stat(93) .. ":" .. stat(94) .. ":" .. stat(95),
-        "fe4_seeds.txt"
-    )
-    noise_fn = os2d_noisefn(current_seed)
+function init_terrain_renderer(noise_fn)
+    terrain_noise_fn = noise_fn
 end
+
+-- -- Initialize with a seed
+-- function init_terrain_renderer()
+--     current_seed = flr(rnd(32767))
+--     if not _seeds_initialized then
+--         printh("", "fe4_seeds.txt", true)
+--         _seeds_initialized = true
+--     end
+--     printh(
+--         "Generated map with seed: " .. current_seed ..
+--         " at " .. stat(93) .. ":" .. stat(94) .. ":" .. stat(95),
+--         "fe4_seeds.txt"
+--     )
+--     noise_fn = os2d_noisefn(current_seed)
+-- end
 
 -- Get terrain type at any world position
 function get_terrain_at(x, y)
@@ -36,16 +40,16 @@ function get_terrain_at(x, y)
     local h = 0
     local layers = {
         -- Scale, weight
-        { 1 / 32, 1 },
-        { 1 / 16, 1 / 2 },
-        { 1 / 8,  1 / 4 },
-        { 1 / 4,  1 / 8 },
-        { 1 / 2,  1 / 16 }
+        -- { 1 / 32, 1 },
+        { 1 / 16, 1 },
+        { 1 / 8,  1 / 2 },
+        { 1 / 4,  1 / 4 },
+        { 1 / 2,  1 / 8 }
     }
     
     for l in all(layers) do
         local scale, weight = unpack(l)
-        h += noise_fn(x * scale, y * scale) * weight
+        h += terrain_noise_fn(x * scale, y * scale) * weight
     end
 
     if h < -0.5 then
