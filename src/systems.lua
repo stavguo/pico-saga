@@ -50,6 +50,16 @@ function init_systems(world, components)
             end
         end
     )
+
+    systems.draw_coordinates = world.system(
+        { components.Position, components.Cursor },
+        function(entity)
+            color(7)
+            -- Add camera_x/y to get screen-space coordinates
+            print("x:" .. entity[components.Position].x .. " y:" .. entity[components.Position].y, 
+                  camera_x + 8, camera_y + 8)
+        end
+    )
     
     -- Draw cursor system
     systems.draw_cursor = world.system(

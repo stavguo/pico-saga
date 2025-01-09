@@ -1,9 +1,6 @@
+-- https://www.geeksforgeeks.org/maximum-size-sub-matrix-with-all-1s-in-a-binary-matrix/#using-space-optimized-dp-onm-time-and-on-space
 function find_largest_square(start_x, start_y, width, height)
     local dp = {}
-    
-    -- Set strict quadrant bounds
-    local end_x = start_x + width
-    local end_y = start_y + height
     
     -- Initialize dp array
     for y=0,height-1 do
@@ -19,7 +16,6 @@ function find_largest_square(start_x, start_y, width, height)
         for y=height-1,0,-1 do
             local tmp = dp[y]
             
-            -- Check terrain directly instead of using a grid
             local world_x = start_x + x
             local world_y = start_y + y
             local terrain = get_terrain_at(world_x, world_y)
@@ -28,25 +24,24 @@ function find_largest_square(start_x, start_y, width, height)
             if not is_grass then
                 dp[y] = 0
             else
-                local min_val = dp[y]  -- right
-                if y < height-1 then
-                    min_val = min(min_val, dp[y+1])  -- bottom
-                end
-                min_val = min(min_val, diagonal)  -- diagonal
+                -- Get all three neighbors
+                local right = dp[y]
+                local bottom = (y < height-1) and dp[y+1] or 0
+                -- Take minimum of all three at once, matching C++ logic
+                local min_val = min(right, min(bottom, diagonal))
                 dp[y] = 1 + min_val
                 
-                -- Track largest square found
                 if dp[y] > max_size then
                     max_size = dp[y]
                     best_x = x
                     best_y = y
+                    printh("New max square: size="..dp[y].." at ("..world_x..","..world_y..")", "fe4_debug.txt")
                 end
             end
             diagonal = tmp
         end
     end
     
-    -- If we found a valid square
     if max_size > 0 then
         return {
             x = start_x + best_x,
@@ -57,25 +52,33 @@ function find_largest_square(start_x, start_y, width, height)
     return nil
 end
 
-function find_castle_spots(num_spots)
-    local quad_size = 16
+function find_castle_spots()
     local quadrants = {
-        {x=0, y=0},      -- Q1
-        {x=16, y=0},     -- Q2
-        {x=0, y=16},     -- Q3
-        {x=16, y=16}     -- Q4
+        {x_start=0,  x_end=15, y_start=0,  y_end=15},  -- Q1: explicitly 0,0 to 15,15
+        {x_start=16, x_end=31, y_start=0,  y_end=15},  -- Q2: explicitly 16,0 to 31,15
+        {x_start=0,  x_end=15, y_start=16, y_end=31},  -- Q3: explicitly 0,16 to 15,31
+        {x_start=16, x_end=31, y_start=16, y_end=31}   -- Q4: explicitly 16,16 to 31,31
     }
     
     local best_spots = {}
     
     -- Find largest square in each quadrant
     for i, quad in ipairs(quadrants) do
-        printh("Checking quadrant " .. i .. " at (" .. quad.x .. "," .. quad.y .. ")", "fe4_castles.txt")
-        local spot = find_largest_square(quad.x, quad.y, quad_size, quad_size)
+        local width = quad.x_end - quad.x_start + 1
+        local height = quad.y_end - quad.y_start + 1
+        
+        printh("Checking quadrant " .. i .. " range: (" .. 
+               quad.x_start .. "," .. quad.y_start .. ") to (" .. 
+               quad.x_end .. "," .. quad.y_end .. ")", 
+               "fe4_castles.txt")
+               
+        local spot = find_largest_square(quad.x_start, quad.y_start, width, height)
         if spot then
             spot.quadrant = i
             add(best_spots, spot)
-            printh("Found spot in quadrant " .. i .. " size=" .. spot.size .. " at (" .. spot.x .. "," .. spot.y .. ")", "fe4_castles.txt")
+            printh("Found spot in Q" .. i .. ": size=" .. spot.size .. 
+                   " at (" .. spot.x .. "," .. spot.y .. ")", 
+                   "fe4_castles.txt")
         else
             printh("No valid spot found in quadrant " .. i, "fe4_castles.txt")
         end

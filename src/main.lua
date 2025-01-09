@@ -61,6 +61,7 @@ function _draw()
         -- Draw terrain based on cursor position
         draw_terrain(pos.x, pos.y)
         systems.draw_castles()
+        systems.draw_coordinates()
         -- Draw cursor
         spr(0, pos.x * 8, pos.y * 8)
     end
