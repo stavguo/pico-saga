@@ -150,7 +150,7 @@ function find_castle_spots()
     return best_spots
 end
 
-function init_castles(world, components, noise_fn)
+function init_castles(world, components)
     local spots = find_castle_spots()
     
     if not _castle_log_initialized then

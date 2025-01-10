@@ -3,6 +3,7 @@ version 42
 __lua__
 #include lib/pecs.lua
 #include lib/opensimplex.lua
+#include src/globals.lua
 #include src/components.lua
 #include src/camera.lua
 #include src/systems.lua

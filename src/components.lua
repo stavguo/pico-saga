@@ -3,7 +3,9 @@ function init_components(world)
         Position = world.component(),
         Cursor = world.component(),
         Terrain = world.component(),
-        Castle = world.component()
+        Castle = world.component(),
+        Selected = world.component(),
+        Deselected = world.component()
     }
     return components
 end
