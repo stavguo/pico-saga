@@ -1,15 +1,6 @@
 local world
 local components
 local systems
-local noise_fn
-
--- Map dimensions (FE4-like scale)
-MAP_WIDTH = 32
-MAP_HEIGHT = 32
-
--- Screen dimensions in tiles
-SCREEN_TILES_WIDTH = 16
-SCREEN_TILES_HEIGHT = 16
 
 function init_noise()
     local seed = flr(rnd(32767))
@@ -31,10 +22,8 @@ function _init()
     systems = init_systems(world, components)
 
     -- Initialize noise function first
-    local seed, noise = init_noise()
-    noise_fn = noise  -- Store globally
+    local seed, noise_fn = init_noise()
 
-    -- Initialize terrain renderer with the noise function
     init_terrain_renderer(noise_fn)
 
     -- Create cursor
@@ -42,27 +31,34 @@ function _init()
     cursor += components.Position({ x = flr(MAP_WIDTH/2), y = flr(MAP_HEIGHT/2) })
     cursor += components.Cursor({})
 
-    -- Initialize castles with the same noise function
-    init_castles(world, components, noise_fn)
+    init_castles(world, components)
 end
 
 function _update()
     world.update()
-    systems.move_cursor()
+    
+    if GAME_STATE == "world" then
+        systems.move_cursor()
+    end
+    
+    -- Always run these
+    systems.check_selection()
+    systems.clean_deselected()
 end
 
 function _draw()
     cls()
     
-    -- Get cursor position
-    local cursor_ent = world.query({components.Cursor})[1]
-    if cursor_ent then
-        local pos = cursor_ent[components.Position]
-        -- Draw terrain based on cursor position
-        draw_terrain(pos.x, pos.y)
-        systems.draw_castles()
-        systems.draw_coordinates()
-        -- Draw cursor
-        spr(0, pos.x * 8, pos.y * 8)
+    if GAME_STATE == "world" then
+        local cursor_ent = world.query({components.Cursor})[1]
+        if cursor_ent then
+            local pos = cursor_ent[components.Position]
+            draw_terrain(pos.x, pos.y)
+            systems.draw_castles()
+            systems.draw_coordinates()
+            spr(0, pos.x * 8, pos.y * 8)
+        end
+    else
+        print("inside castle", 48, 60, 7)
     end
 end

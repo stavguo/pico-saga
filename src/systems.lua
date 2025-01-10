@@ -21,8 +21,8 @@ function init_systems(world, components)
             local pos = entity[components.Position]
             local terrain = entity[components.Terrain]
             
-            local cam_tile_x = flr(camera_x / 8)
-            local cam_tile_y = flr(camera_y / 8)
+            local cam_tile_x = flr(CAMERA_X / 8)
+            local cam_tile_y = flr(CAMERA_Y / 8)
             
             if pos.x >= cam_tile_x - 1 and
                 pos.x <= cam_tile_x + SCREEN_TILES_WIDTH + 1 and
@@ -39,8 +39,8 @@ function init_systems(world, components)
             local pos = entity[components.Position]
             local sprite = entity[components.Castle].is_player and 8 or 9
             
-            local cam_tile_x = flr(camera_x / 8)
-            local cam_tile_y = flr(camera_y / 8)
+            local cam_tile_x = flr(CAMERA_X / 8)
+            local cam_tile_y = flr(CAMERA_Y / 8)
             
             if pos.x >= cam_tile_x - 1 and
                 pos.x <= cam_tile_x + SCREEN_TILES_WIDTH + 1 and
@@ -55,9 +55,9 @@ function init_systems(world, components)
         { components.Position, components.Cursor },
         function(entity)
             color(7)
-            -- Add camera_x/y to get screen-space coordinates
+            -- Add CAMERA_X/y to get screen-space coordinates
             print("x:" .. entity[components.Position].x .. " y:" .. entity[components.Position].y, 
-                  camera_x + 8, camera_y + 8)
+                  CAMERA_X + 8, CAMERA_Y + 8)
         end
     )
     
@@ -67,6 +67,42 @@ function init_systems(world, components)
         function(entity)
             local pos = entity[components.Position]
             spr(0, pos.x * 8, pos.y * 8)
+        end
+    )
+
+    -- Selection system
+    systems.check_selection = world.system(
+        { components.Position, components.Cursor },
+        function(cursor_entity)
+            if btnp(🅾️) then
+                local cursor_pos = cursor_entity[components.Position]
+                local castles = world.query({ components.Position, components.Castle })
+                
+                for id, castle in pairs(castles) do
+                    local castle_pos = castle[components.Position]
+                    if castle_pos.x == cursor_pos.x and castle_pos.y == cursor_pos.y then
+                        castle += components.Selected()
+                        GAME_STATE = "castle"
+                    end
+                end
+            end
+            
+            if btnp(❌) then
+                local selected = world.query({ components.Selected })
+                for id, entity in pairs(selected) do
+                    entity += components.Deselected()
+                    entity -= components.Selected
+                    GAME_STATE = "world"
+                end
+            end
+        end
+    )
+    
+    -- Clean up deselected entities
+    systems.clean_deselected = world.system(
+        { components.Deselected },
+        function(entity)
+            entity -= components.Deselected
         end
     )
     
