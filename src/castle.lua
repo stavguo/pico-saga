@@ -1,14 +1,21 @@
--- https://www.geeksforgeeks.org/maximum-size-sub-matrix-with-all-1s-in-a-binary-matrix/#using-space-optimized-dp-onm-time-and-on-space
-function find_largest_square(start_x, start_y, width, height)
-    local dp = {}
+-- -- https://www.geeksforgeeks.org/maximum-size-sub-matrix-with-all-1s-in-a-binary-matrix/#using-space-optimized-dp-onm-time-and-on-space
+function find_largest_square(start_x, start_y, width, height, quadrant)
+    if not _debug_log_initialized then
+        printh("", "fe4_debug.txt", true)
+        _debug_log_initialized = true
+    end
     
-    -- Initialize dp array
+    printh("Starting square search at (" .. start_x .. "," .. start_y .. 
+           ") with dimensions " .. width .. "x" .. height .. 
+           " in quadrant " .. quadrant, "fe4_debug.txt")
+    
+    local dp = {}
     for y=0,height-1 do
         dp[y] = 0
     end
     
     local max_size = 0
-    local best_x, best_y = -1, -1
+    local candidates = {} -- Store all squares of max size
     local diagonal = 0
     
     -- Process column by column from right to left
@@ -27,29 +34,85 @@ function find_largest_square(start_x, start_y, width, height)
                 -- Get all three neighbors
                 local right = dp[y]
                 local bottom = (y < height-1) and dp[y+1] or 0
-                -- Take minimum of all three at once, matching C++ logic
                 local min_val = min(right, min(bottom, diagonal))
                 dp[y] = 1 + min_val
                 
-                if dp[y] > max_size then
-                    max_size = dp[y]
-                    best_x = x
-                    best_y = y
-                    printh("New max square: size="..dp[y].." at ("..world_x..","..world_y..")", "fe4_debug.txt")
+                if dp[y] >= max_size then
+                    if dp[y] > max_size then
+                        -- New max found, clear previous candidates
+                        candidates = {}
+                        max_size = dp[y]
+                    end
+                    -- Add this square to candidates
+                    add(candidates, {
+                        x = world_x,
+                        y = world_y,
+                        size = dp[y]
+                    })
+                    printh("Found square: size="..dp[y].." at ("..world_x..","..world_y..")", "fe4_debug.txt")
                 end
             end
             diagonal = tmp
         end
     end
     
-    if max_size > 0 then
-        return {
-            x = start_x + best_x,
-            y = start_y + best_y,
-            size = max_size
-        }
+    if #candidates > 0 then
+        -- Pick best candidate based on quadrant preference
+        local best_score = 32767 -- Large number
+        local best_candidate = nil
+        
+        for c in all(candidates) do
+            local score = 0
+            local quad_center_x = start_x + flr(width/2)
+            local quad_center_y = start_y + flr(height/2)
+            
+            if quadrant == 1 then -- Top-left
+                score = abs(c.x - start_x) + abs(c.y - start_y)
+            elseif quadrant == 2 then -- Top-right
+                score = abs(c.x - (start_x + width - 1)) + abs(c.y - start_y)
+            elseif quadrant == 3 then -- Bottom-left
+                score = abs(c.x - start_x) + abs(c.y - (start_y + height - 1))
+            else -- Bottom-right
+                score = abs(c.x - (start_x + width - 1)) + abs(c.y - (start_y + height - 1))
+            end
+            
+            -- Also factor in distance from center to avoid extremes
+            score = score + flr(abs(c.x - quad_center_x) + abs(c.y - quad_center_y))/2
+            
+            if score < best_score then
+                best_score = score
+                best_candidate = c
+            end
+        end
+        
+        printh("Selected best square: size="..best_candidate.size..
+               " at ("..best_candidate.x..","..best_candidate.y..
+               ") with score "..best_score, "fe4_debug.txt")
+        return best_candidate
     end
+    
+    printh("No valid square found in this region", "fe4_debug.txt")
     return nil
+end
+
+function get_castle_offset(quadrant, size)
+    -- For odd-sized squares, use center placement
+    if size % 2 == 1 then
+        return flr(size/2), flr(size/2)
+    end
+    
+    -- For even-sized squares, bias based on quadrant
+    local half = size/2
+    
+    if quadrant == 1 then     -- Top-left quadrant
+        return half-1, half-1 -- Bias towards top-left
+    elseif quadrant == 2 then -- Top-right quadrant
+        return half, half-1   -- Bias towards top-right
+    elseif quadrant == 3 then -- Bottom-left quadrant
+        return half-1, half   -- Bias towards bottom-left
+    else                      -- Bottom-right quadrant
+        return half, half     -- Bias towards bottom-right
+    end
 end
 
 function find_castle_spots()
@@ -72,7 +135,7 @@ function find_castle_spots()
                quad.x_end .. "," .. quad.y_end .. ")", 
                "fe4_castles.txt")
                
-        local spot = find_largest_square(quad.x_start, quad.y_start, width, height)
+        local spot = find_largest_square(quad.x_start, quad.y_start, width, height, i)
         if spot then
             spot.quadrant = i
             add(best_spots, spot)
@@ -88,7 +151,7 @@ function find_castle_spots()
 end
 
 function init_castles(world, components, noise_fn)
-    local spots = find_castle_spots(4)
+    local spots = find_castle_spots()
     
     if not _castle_log_initialized then
         printh("", "fe4_castles.txt", true)
@@ -104,10 +167,12 @@ function init_castles(world, components, noise_fn)
     
     for i, spot in ipairs(spots) do
         local castle = world.entity()
-        -- Place castle at center of the square
+        -- Get biased offset based on quadrant
+        local offset_x, offset_y = get_castle_offset(spot.quadrant, spot.size)
+        -- Place castle using the offset
         castle += components.Position({ 
-            x = spot.x + flr(spot.size/2),
-            y = spot.y + flr(spot.size/2)
+            x = spot.x + offset_x,
+            y = spot.y + offset_y
         })
         castle += components.Castle({ 
             is_player = i == 1
@@ -117,10 +182,11 @@ function init_castles(world, components, noise_fn)
         printh(
             "Castle " .. i .. 
             " (Player: " .. tostr(i == 1) .. 
-            "): Position=(" .. (spot.x + flr(spot.size/2)) .. 
-            "," .. (spot.y + flr(spot.size/2)) .. 
+            "): Position=(" .. (spot.x + offset_x) .. 
+            "," .. (spot.y + offset_y) .. 
             "), Quadrant=" .. spot.quadrant ..
-            ", Square Size=" .. spot.size .. "x" .. spot.size,
+            ", Square Size=" .. spot.size .. "x" .. spot.size ..
+            ", Offset=(" .. offset_x .. "," .. offset_y .. ")",
             "fe4_castles.txt"
         )
     end
