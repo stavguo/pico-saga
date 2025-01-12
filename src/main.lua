@@ -23,32 +23,26 @@ function _init()
 
     -- Initialize noise function first
     local seed, noise_fn = init_noise()
-
     init_terrain_renderer(noise_fn)
 
     -- Create cursor
     local cursor = world.entity()
-    cursor += components.Position({ x = flr(MAP_WIDTH/2), y = flr(MAP_HEIGHT/2) })
-    cursor += components.Cursor({})
 
-    init_castles(world, components)
+    init_castles(world, components, cursor)
 end
 
 function _update()
     world.update()
-    
     if GAME_STATE == "world" then
         systems.move_cursor()
     end
-    
-    -- Always run these
     systems.check_selection()
-    systems.clean_deselected()
+    systems.handle_castle_selection()
+    systems.handle_castle_deselection()
 end
 
 function _draw()
     cls()
-    
     if GAME_STATE == "world" then
         local cursor_ent = world.query({components.Cursor})[1]
         if cursor_ent then
@@ -58,7 +52,7 @@ function _draw()
             systems.draw_coordinates()
             spr(0, pos.x * 8, pos.y * 8)
         end
-    else
-        print("inside castle", 48, 60, 7)
+    elseif GAME_STATE == "castle" then
+        draw_castle_interior()
     end
 end

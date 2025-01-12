@@ -6,30 +6,12 @@ function init_systems(world, components)
         { components.Position, components.Cursor },
         function(entity)
             local pos = entity[components.Position]
-            if btnp(0) then pos.x = max(0, pos.x - 1) end
-            if btnp(1) then pos.x = min(MAP_WIDTH - 1, pos.x + 1) end
-            if btnp(2) then pos.y = max(0, pos.y - 1) end
-            if btnp(3) then pos.y = min(MAP_HEIGHT - 1, pos.y + 1) end
-            update_camera(pos)
-        end
-    )
-    
-    -- Draw terrain system
-    systems.draw_terrain = world.system(
-        { components.Position, components.Terrain },
-        function(entity)
-            local pos = entity[components.Position]
-            local terrain = entity[components.Terrain]
-            
-            local cam_tile_x = flr(CAMERA_X / 8)
-            local cam_tile_y = flr(CAMERA_Y / 8)
-            
-            if pos.x >= cam_tile_x - 1 and
-                pos.x <= cam_tile_x + SCREEN_TILES_WIDTH + 1 and
-                pos.y >= cam_tile_y - 1 and
-                pos.y <= cam_tile_y + SCREEN_TILES_HEIGHT + 1 then
-                spr(terrain.sprite, pos.x * 8, pos.y * 8)
-            end
+            local moved = false
+            if btnp(0) then pos.x = max(0, pos.x - 1) moved = true end
+            if btnp(1) then pos.x = min(MAP_WIDTH - 1, pos.x + 1) moved = true end
+            if btnp(2) then pos.y = max(0, pos.y - 1) moved = true end
+            if btnp(3) then pos.y = min(MAP_HEIGHT - 1, pos.y + 1) moved = true end
+            if (moved) update_camera(pos)
         end
     )
 
@@ -74,35 +56,56 @@ function init_systems(world, components)
     systems.check_selection = world.system(
         { components.Position, components.Cursor },
         function(cursor_entity)
-            if btnp(🅾️) then
+            if btnp(4) then
                 local cursor_pos = cursor_entity[components.Position]
-                local castles = world.query({ components.Position, components.Castle })
-                
-                for id, castle in pairs(castles) do
-                    local castle_pos = castle[components.Position]
-                    if castle_pos.x == cursor_pos.x and castle_pos.y == cursor_pos.y then
-                        castle += components.Selected()
-                        GAME_STATE = "castle"
+                local positions = world.query({ components.Position })
+                for id, position in pairs(positions) do
+                    local pos = position[components.Position]
+                    if not position[components.Cursor] and pos.x == cursor_pos.x and pos.y == cursor_pos.y then
+                        if not position[components.Selected] then
+                            position += components.Selected()
+                        end
+                        return
                     end
                 end
             end
             
-            if btnp(❌) then
+            if btnp(5) then
                 local selected = world.query({ components.Selected })
-                for id, entity in pairs(selected) do
-                    entity += components.Deselected()
-                    entity -= components.Selected
-                    GAME_STATE = "world"
+                for id, sel in pairs(selected) do
+                    if not sel[components.Deselected] then
+                        sel += components.Deselected()
+                        world.queue(function()
+                            sel -= components.Selected
+                        end)
+                    end
                 end
             end
         end
     )
     
-    -- Clean up deselected entities
-    systems.clean_deselected = world.system(
-        { components.Deselected },
-        function(entity)
-            entity -= components.Deselected
+    -- Castle-specific system for selection
+    systems.handle_castle_selection = world.system(
+        { components.Castle, components.Selected },
+        function(castle)
+            if GAME_STATE == "world" then
+                GAME_STATE = "castle"
+            end
+        end
+    )
+    
+    -- Castle-specific system for deselection
+    systems.handle_castle_deselection = world.system(
+        { components.Castle, components.Deselected },
+        function(castle)
+            if GAME_STATE == "castle" then
+                GAME_STATE = "world"
+                local pos = castle[components.Position]
+                update_camera(pos)
+                world.queue(function()
+                    castle -= components.Deselected
+                end)
+            end
         end
     )
     
