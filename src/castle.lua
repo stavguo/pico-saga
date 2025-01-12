@@ -1,14 +1,5 @@
 -- -- https://www.geeksforgeeks.org/maximum-size-sub-matrix-with-all-1s-in-a-binary-matrix/#using-space-optimized-dp-onm-time-and-on-space
 function find_largest_square(start_x, start_y, width, height, quadrant)
-    if not _debug_log_initialized then
-        printh("", "fe4_debug.txt", true)
-        _debug_log_initialized = true
-    end
-    
-    printh("Starting square search at (" .. start_x .. "," .. start_y .. 
-           ") with dimensions " .. width .. "x" .. height .. 
-           " in quadrant " .. quadrant, "fe4_debug.txt")
-    
     local dp = {}
     for y=0,height-1 do
         dp[y] = 0
@@ -49,7 +40,6 @@ function find_largest_square(start_x, start_y, width, height, quadrant)
                         y = world_y,
                         size = dp[y]
                     })
-                    printh("Found square: size="..dp[y].." at ("..world_x..","..world_y..")", "fe4_debug.txt")
                 end
             end
             diagonal = tmp
@@ -84,14 +74,8 @@ function find_largest_square(start_x, start_y, width, height, quadrant)
                 best_candidate = c
             end
         end
-        
-        printh("Selected best square: size="..best_candidate.size..
-               " at ("..best_candidate.x..","..best_candidate.y..
-               ") with score "..best_score, "fe4_debug.txt")
         return best_candidate
     end
-    
-    printh("No valid square found in this region", "fe4_debug.txt")
     return nil
 end
 
@@ -129,42 +113,18 @@ function find_castle_spots()
     for i, quad in ipairs(quadrants) do
         local width = quad.x_end - quad.x_start + 1
         local height = quad.y_end - quad.y_start + 1
-        
-        printh("Checking quadrant " .. i .. " range: (" .. 
-               quad.x_start .. "," .. quad.y_start .. ") to (" .. 
-               quad.x_end .. "," .. quad.y_end .. ")", 
-               "fe4_castles.txt")
-               
         local spot = find_largest_square(quad.x_start, quad.y_start, width, height, i)
         if spot then
             spot.quadrant = i
             add(best_spots, spot)
-            printh("Found spot in Q" .. i .. ": size=" .. spot.size .. 
-                   " at (" .. spot.x .. "," .. spot.y .. ")", 
-                   "fe4_castles.txt")
-        else
-            printh("No valid spot found in quadrant " .. i, "fe4_castles.txt")
         end
     end
     
     return best_spots
 end
 
-function init_castles(world, components)
+function init_castles(world, components, cursor)
     local spots = find_castle_spots()
-    
-    if not _castle_log_initialized then
-        printh("", "fe4_castles.txt", true)
-        _castle_log_initialized = true
-    end
-    
-    printh(
-        "\n=== Castle Placements at " .. 
-        stat(93) .. ":" .. stat(94) .. ":" .. stat(95) .. 
-        " ===",
-        "fe4_castles.txt"
-    )
-    
     for i, spot in ipairs(spots) do
         local castle = world.entity()
         -- Get biased offset based on quadrant
@@ -177,19 +137,32 @@ function init_castles(world, components)
         castle += components.Castle({ 
             is_player = i == 1
         })
-        
-        -- Log castle details
-        printh(
-            "Castle " .. i .. 
-            " (Player: " .. tostr(i == 1) .. 
-            "): Position=(" .. (spot.x + offset_x) .. 
-            "," .. (spot.y + offset_y) .. 
-            "), Quadrant=" .. spot.quadrant ..
-            ", Square Size=" .. spot.size .. "x" .. spot.size ..
-            ", Offset=(" .. offset_x .. "," .. offset_y .. ")",
-            "fe4_castles.txt"
-        )
+        if i == 1 then
+            -- Create cursor
+            cursor += components.Position({ x = spot.x + offset_x, y = spot.y + offset_y })
+            cursor += components.Cursor({})
+            update_camera({
+                x = spot.x + offset_x,
+                y = spot.y + offset_y
+            })
+        end
     end
+end
+
+function draw_castle_interior()
+    -- Clear any prior camera offset since we want fixed position
+    camera(0, 0)
     
-    printh("=== End Castle Placements ===\n", "fe4_castles.txt")
+    -- Draw the floor tiles (16x16 grid)
+    for y=0,15 do
+        for x=0,15 do
+            -- If it's an edge tile, draw wall
+            if x == 0 or x == 15 or y == 0 or y == 15 then
+                spr(10, x * 8, y * 8)
+            else
+                -- Otherwise draw floor
+                spr(11, x * 8, y * 8)
+            end
+        end
+    end
 end
