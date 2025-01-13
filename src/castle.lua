@@ -156,12 +156,14 @@ function draw_castle_interior()
     -- Draw the floor tiles (16x16 grid)
     for y=0,15 do
         for x=0,15 do
-            -- If it's an edge tile, draw wall
-            if x == 0 or x == 15 or y == 0 or y == 15 then
-                spr(10, x * 8, y * 8)
+            if x == 0 or x == 15 then
+                if y == 0 or y == 15 then
+                    spr(10, x * 8, y * 8)
+                else
+                    spr(11, x * 8, y * 8)
+                end
             else
-                -- Otherwise draw floor
-                spr(11, x * 8, y * 8)
+                spr(12, x * 8, y * 8)
             end
         end
     end
