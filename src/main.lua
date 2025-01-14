@@ -39,6 +39,8 @@ function _update()
     systems.check_selection()
     systems.handle_castle_selection()
     systems.handle_castle_deselection()
+    systems.handle_unit_deployment()
+    systems.handle_unit_deselection()
 end
 
 function _draw()

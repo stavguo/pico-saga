@@ -29,3 +29,5 @@ CAMERA_Y = 0
 GAME_STATE = "world"
 
 NUM_PLAYER_UNITS = 9
+
+SELECTED_UNIT = nil

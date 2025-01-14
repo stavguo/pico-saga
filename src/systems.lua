@@ -85,7 +85,7 @@ function init_systems(world, components)
     systems.handle_castle_selection = world.system(
         { components.Castle, components.Selected },
         function(castle)
-            if GAME_STATE == "world" then
+            if GAME_STATE == "world" and not SELECTED_UNIT then
                 GAME_STATE = "castle"
                 update_cursor(world, components, 7, 2, 16, 16)
             end
@@ -118,6 +118,37 @@ function init_systems(world, components)
             local unit = entity[components.Unit]
             if pos.in_castle then
                 spr(unit.sprite, pos.x * 8, pos.y * 8)
+            end
+        end
+    )
+
+    systems.handle_unit_deployment = world.system(
+        { components.Unit, components.Selected },
+        function(unit)
+            if not SELECTED_UNIT and GAME_STATE == "castle" then
+                SELECTED_UNIT = unit
+                local castles = world.query({ components.Selected, components.Castle })
+                for id, castle in pairs(castles) do
+                    if not castle[components.Deselected] then
+                        castle += components.Deselected()
+                        world.queue(function()
+                            castle -= components.Selected
+                        end)
+                    end
+                end
+            end
+        end
+    )
+
+    systems.handle_unit_deselection = world.system(
+        { components.Unit, components.Deselected },
+        function(unit)
+            if SELECTED_UNIT and SELECTED_UNIT == unit then
+                SELECTED_UNIT = nil
+                world.queue(function()
+                    unit -= components.Selected
+                    unit -= components.Deselected
+                end)
             end
         end
     )
