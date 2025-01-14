@@ -140,11 +140,7 @@ function init_castles(world, components, cursor)
         if i == 1 then
             -- Create cursor
             cursor += components.Position({ x = spot.x + offset_x, y = spot.y + offset_y })
-            cursor += components.Cursor({})
-            update_camera({
-                x = spot.x + offset_x,
-                y = spot.y + offset_y
-            })
+            cursor += components.Cursor({ max_width = MAX_WIDTH, max_height = MAX_HEIGHT })
         end
     end
 end

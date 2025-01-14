@@ -1,17 +1,16 @@
 function init_systems(world, components)
     local systems = {}
     
-    -- Move cursor system
     systems.move_cursor = world.system(
         { components.Position, components.Cursor },
         function(entity)
             local pos = entity[components.Position]
-            local moved = false
-            if btnp(0) then pos.x = max(0, pos.x - 1) moved = true end
-            if btnp(1) then pos.x = min(MAP_WIDTH - 1, pos.x + 1) moved = true end
-            if btnp(2) then pos.y = max(0, pos.y - 1) moved = true end
-            if btnp(3) then pos.y = min(MAP_HEIGHT - 1, pos.y + 1) moved = true end
-            if (moved) update_camera(pos)
+            local cursor = entity[components.Cursor]
+            if (btnp(0)) pos.x = mid(0, pos.x - 1, cursor.max_width - 1)
+            if (btnp(1)) pos.x = mid(0, pos.x + 1, cursor.max_width - 1)
+            if (btnp(2)) pos.y = mid(0, pos.y - 1, cursor.max_height - 1)
+            if (btnp(3)) pos.y = mid(0, pos.y + 1, cursor.max_height - 1)
+            update_camera(pos.x, pos.y, cursor.max_width, cursor.max_height)
         end
     )
 
@@ -43,7 +42,6 @@ function init_systems(world, components)
         end
     )
     
-    -- Draw cursor system
     systems.draw_cursor = world.system(
         { components.Position, components.Cursor },
         function(entity)
@@ -52,7 +50,6 @@ function init_systems(world, components)
         end
     )
 
-    -- Selection system
     systems.check_selection = world.system(
         { components.Position, components.Cursor },
         function(cursor_entity)
@@ -61,7 +58,8 @@ function init_systems(world, components)
                 local positions = world.query({ components.Position })
                 for id, position in pairs(positions) do
                     local pos = position[components.Position]
-                    if not position[components.Cursor] and pos.x == cursor_pos.x and pos.y == cursor_pos.y then
+                    local castle_cond = (pos.in_castle and GAME_STATE == "castle") or (not pos.in_castle and GAME_STATE == "world")
+                    if not position[components.Cursor] and castle_cond and pos.x == cursor_pos.x and pos.y == cursor_pos.y then
                         if not position[components.Selected] then
                             position += components.Selected()
                         end
@@ -84,27 +82,42 @@ function init_systems(world, components)
         end
     )
     
-    -- Castle-specific system for selection
     systems.handle_castle_selection = world.system(
         { components.Castle, components.Selected },
         function(castle)
             if GAME_STATE == "world" then
                 GAME_STATE = "castle"
+                update_cursor(world, components, 7, 2, 16, 16)
             end
         end
     )
     
-    -- Castle-specific system for deselection
     systems.handle_castle_deselection = world.system(
         { components.Castle, components.Deselected },
         function(castle)
             if GAME_STATE == "castle" then
                 GAME_STATE = "world"
-                local pos = castle[components.Position]
-                update_camera(pos)
+                update_cursor(
+                    world,
+                    components,
+                    castle[components.Position].x,
+                    castle[components.Position].y,
+                    MAP_WIDTH,
+                    MAP_HEIGHT)
                 world.queue(function()
                     castle -= components.Deselected
                 end)
+            end
+        end
+    )
+
+    systems.draw_castle_units = world.system(
+        { components.Position, components.Unit },
+        function(entity)
+            local pos = entity[components.Position]
+            local unit = entity[components.Unit]
+            if pos.in_castle then
+                spr(unit.sprite, pos.x * 8, pos.y * 8)
             end
         end
     )
