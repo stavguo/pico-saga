@@ -26,38 +26,30 @@ function _init()
     init_terrain_renderer(noise_fn)
 
     -- Create cursor
-    local cursor = world.entity()
+    CURSOR = world.entity()
 
-    init_castles(world, components, cursor)
-
+    init_castles(world, components)
     init_units(world, components)
 end
 
 function _update()
     world.update()
     systems.move_cursor()
-    systems.check_selection()
-    systems.handle_castle_selection()
-    systems.handle_castle_deselection()
-    systems.handle_unit_deployment()
-    systems.handle_unit_deselection()
+    systems.handle_cursor_coords()
+    systems.castle_selection()
+    systems.unit_selection()
+    systems.menu_navigation()
 end
 
 function _draw()
     cls()
-    local cursor_ent = world.query({components.Cursor})[1]
-    local pos = nil
-    if cursor_ent then
-        pos = cursor_ent[components.Position]
-    end
     if GAME_STATE == "world" then
-        draw_terrain(pos.x, pos.y)
+        draw_terrain()
         systems.draw_castles()
-        systems.draw_coordinates()
     elseif GAME_STATE == "castle" then
         draw_castle_interior()
-        systems.draw_castle_units()
     end
-    -- render cursor last
-    if (pos) spr(0, pos.x * 8, pos.y * 8)
+    systems.draw_units()
+    systems.draw_cursor()
+    systems.draw_ui()
 end

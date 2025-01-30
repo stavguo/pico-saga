@@ -123,7 +123,7 @@ function find_castle_spots()
     return best_spots
 end
 
-function init_castles(world, components, cursor)
+function init_castles(world, components)
     local spots = find_castle_spots()
     for i, spot in ipairs(spots) do
         local castle = world.entity()
@@ -139,8 +139,8 @@ function init_castles(world, components, cursor)
         })
         if i == 1 then
             -- Create cursor
-            cursor += components.Position({ x = spot.x + offset_x, y = spot.y + offset_y, in_castle = false })
-            cursor += components.Cursor({ max_width = MAX_WIDTH, max_height = MAX_HEIGHT })
+            CURSOR += components.Position({ x = spot.x + offset_x, y = spot.y + offset_y, in_castle = false })
+            CURSOR += components.Cursor({ max_width = MAX_WIDTH, max_height = MAX_HEIGHT })
         end
     end
 end
