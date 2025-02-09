@@ -1,16 +1,14 @@
 pico-8 cartridge // http://www.pico-8.com
 version 42
 __lua__
-#include lib/pecs.lua
 #include lib/opensimplex.lua
 #include src/globals.lua
-#include src/components.lua
-#include src/camera.lua
-#include src/ui.lua
-#include src/systems.lua
 #include src/terrain.lua
 #include src/castle.lua
 #include src/unit.lua
+#include src/camera.lua
+#include src/ui.lua
+#include src/fsm.lua
 #include src/main.lua
 __gfx__
 77700777bbbbbbbbccccccccbb333bbbb333333bffffffff11111111333773336cb6cb6c58b58b58111111111d1dd1d1dddddddd00000000000ccc0accc00000

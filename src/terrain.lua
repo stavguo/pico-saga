@@ -19,9 +19,9 @@ function get_terrain_at(x, y)
     end
 
     if h < -0.6 then
-        return TERRAIN_TYPES.DEEP_WATER
+        return TERRAIN_TYPES.SEA
     elseif h < -0.2 then
-        return TERRAIN_TYPES.WATER
+        return TERRAIN_TYPES.SHOAL
     elseif h < -0.1 then
         return TERRAIN_TYPES.SAND
     elseif h < 0.5 then
@@ -54,8 +54,8 @@ end
 -- Get visible tile coordinates based on cursor position
 function get_visible_tiles()
     -- Convert camera position from pixels to tiles
-    local cam_tile_x = flr(CAMERA_X / 8)
-    local cam_tile_y = flr(CAMERA_Y / 8)
+    local cam_tile_x = flr(CAMERA.x / 8)
+    local cam_tile_y = flr(CAMERA.y / 8)
     
     -- Calculate visible area bounds
     -- Add 1 extra tile on each side to prevent pop-in during scrolling

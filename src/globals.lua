@@ -8,37 +8,42 @@ TERRAIN_TYPES = {
     PLAINS = { sprite = 1, cost = 1 },
     FOREST = { sprite = 3, cost = 2 },
     THICKET = { sprite = 4, cost = 4 },
-    WATER = { sprite = 2, cost = nil }, -- impassable
-    DEEP_WATER = { sprite = 6, cost = nil }, -- impassable
-    SAND = { sprite = 5, cost = 2},
+    SHOAL = { sprite = 2, cost = nil }, -- impassable
+    SEA = { sprite = 6, cost = nil }, -- impassable
+    SAND = { sprite = 5, cost = 2 },
     MOUNTAIN = { sprite = 7, cost = nil } -- impassable
 }
 
 LAYERS = {
-    -- Scale, weight
-    -- { 1 / 32, 1 },
     { 1 / 16, 1 },
     { 1 / 8,  1 / 2 },
     { 1 / 4,  1 / 4 },
     { 1 / 2,  1 / 8 }
 }
 
-CAMERA_X = 0
-CAMERA_Y = 0
+CAMERA = {
+    x = 0,
+    y = 0
+}
+
+UNITS = {}
 
 GAME_STATE = "world"
+IN_CASTLE = false
 
 NUM_PLAYER_UNITS = 9
 
 CURSOR = nil
-CURSOR_COORDS = nil
 SELECTED_UNIT = nil
 SELECTED_CASTLE = nil
-
-CAN_CHANGE_STATE = true
 TRAVERSABLE_TILES = {}
 
-MENU_OPEN = false
-MENU_ITEMS = {}
-MENU_SELECTED = 0
-MENU_SIZE = 0
+MENU = {
+    items = {},
+    selected = 1,
+    x = 0,
+    is_open = false,
+    anchor = ""
+}
+
+UI_STACK = {}
