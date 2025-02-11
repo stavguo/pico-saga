@@ -84,7 +84,15 @@ fsm.states.overworld = setmetatable({
 
 fsm.states.unit_info = setmetatable({
     enter = function()
-        create_ui({"Mv", "Hp", "Atk"}, false)
+        create_ui({
+            SELECTED_UNIT.class
+        }, false)
+        create_ui({
+            "HP: " .. UNIT_STATS[SELECTED_UNIT.class].HP .. " Spd: " .. UNIT_STATS[SELECTED_UNIT.class].Spd,
+            "Str: " .. UNIT_STATS[SELECTED_UNIT.class].Str .. " Def: " .. UNIT_STATS[SELECTED_UNIT.class].Def,
+            "Mag: " .. UNIT_STATS[SELECTED_UNIT.class].Mag .. " Mdf: " .. UNIT_STATS[SELECTED_UNIT.class].Mdf,
+            "Skl: " .. UNIT_STATS[SELECTED_UNIT.class].Skl .. " Mov: " .. UNIT_STATS[SELECTED_UNIT.class].Mov
+        }, false)
     end,
     update = function()
         if btnp(0) or btnp(1) or btnp(2) or btnp(3) then
@@ -104,7 +112,7 @@ fsm.states.unit_info = setmetatable({
             draw_castles()
             draw_nonselected_overworld_units()
         end
-        draw_flashing_sprite(SELECTED_UNIT.sprite, SELECTED_UNIT.x, SELECTED_UNIT.y)
+        draw_selected_unit_flashing(SELECTED_UNIT)
         draw_cursor(true)
         draw_ui()
     end,
@@ -155,9 +163,9 @@ fsm.states.move_unit = setmetatable({
         draw_castles()
         draw_nonselected_overworld_units()
         if SELECTED_UNIT.in_castle then
-            draw_flashing_sprite(SELECTED_UNIT.sprite, SELECTED_CASTLE.x, SELECTED_CASTLE.y)
+            draw_selected_unit_flashing(SELECTED_UNIT, SELECTED_CASTLE.x, SELECTED_CASTLE.y)
         else
-            draw_flashing_sprite(SELECTED_UNIT.sprite, SELECTED_UNIT.x, SELECTED_UNIT.y)
+            draw_selected_unit_flashing(SELECTED_UNIT)
         end
         draw_cursor(true)
         draw_cursor_coords()
@@ -206,7 +214,7 @@ fsm.states.action_menu = setmetatable({
         draw_terrain()
         draw_castles()
         draw_nonselected_overworld_units()
-        draw_flashing_sprite(SELECTED_UNIT.sprite, CURSOR.x, CURSOR.y)
+        draw_selected_unit_flashing(SELECTED_UNIT, CURSOR.x, CURSOR.y)
         -- draw_cursor()
         draw_ui()
     end,

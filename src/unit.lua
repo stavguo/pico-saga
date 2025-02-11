@@ -65,30 +65,66 @@ function find_traversable_tiles(start_x, start_y, movement, unit_team)
 end
 
 function init_player_units()
+    local player_classes = {
+        "Sword Soldier", "Sword Soldier", "Sword Soldier",
+        "Spear Soldier", "Spear Soldier", "Spear Soldier",
+        "Axe Soldier", "Axe Soldier", "Axe Soldier"
+    }
+    local leader_idx = flr(rnd(9)) + 1
     -- Place leader
     local throne = rnd(1) < 0.5 and 7 or 8
-    local weapon = flr(rnd(3))
     add(UNITS, {
         x = throne, y = 1, in_castle = true,
-        sprite = 16 + weapon, team = "player",
-        is_visible = true
+        sprite = UNIT_STATS[player_classes[leader_idx]].Sprite,
+        team = "player",
+        is_visible = true,
+        class = player_classes[leader_idx],
+        HP = UNIT_STATS[player_classes[leader_idx]].HP,
+        Str = UNIT_STATS[player_classes[leader_idx]].Str,
+        Mag = UNIT_STATS[player_classes[leader_idx]].Mag,
+        Skl = UNIT_STATS[player_classes[leader_idx]].Skl,
+        Spd = UNIT_STATS[player_classes[leader_idx]].Spd,
+        Def = UNIT_STATS[player_classes[leader_idx]].Def,
+        Mdf = UNIT_STATS[player_classes[leader_idx]].Mdf,
+        Mov = UNIT_STATS[player_classes[leader_idx]].Mov
     })
 
     -- Place 8 units in formation
-    for i = 0, 7 do
-        local row = flr(i / 4)
-        local pos = i % 4
-        local is_right = pos >= 2
-        add(UNITS, {
-            x = is_right and (11 + (pos - 2) * 2) or (2 + pos * 2),
-            y = 2 + row * 2, in_castle = true,
-            sprite = 13 + flr(rnd(3)), team = "player",
-            is_visible = true
-        })
+    count = 0
+    for i = 1, 9 do
+        if i ~= leader_idx then
+            local row = flr(count / 4)
+            local pos = count % 4
+            local is_right = pos >= 2
+            add(UNITS, {
+                x = is_right and (11 + (pos - 2) * 2) or (2 + pos * 2),
+                y = 2 + row * 2,
+                in_castle = true,
+                sprite = UNIT_STATS[player_classes[i]].Sprite,
+                team = "player",
+                is_visible = true,
+                class = player_classes[i],
+                HP = UNIT_STATS[player_classes[i]].HP,
+                Str = UNIT_STATS[player_classes[i]].Str,
+                Mag = UNIT_STATS[player_classes[i]].Mag,
+                Skl = UNIT_STATS[player_classes[i]].Skl,
+                Spd = UNIT_STATS[player_classes[i]].Spd,
+                Def = UNIT_STATS[player_classes[i]].Def,
+                Mdf = UNIT_STATS[player_classes[i]].Mdf,
+                Mov = UNIT_STATS[player_classes[i]].Mov
+            })
+            count = count + 1
+        end
     end
 end
 
 function init_enemy_units()
+    local enemy_classes = {
+        "Sword Soldier", "Sword Soldier", "Sword Soldier", "Sword Soldier",
+        "Spear Soldier", "Spear Soldier", "Spear Soldier", "Spear Soldier",
+        "Axe Soldier", "Axe Soldier", "Axe Soldier", "Axe Soldier"
+    }
+    SHUFFLE(enemy_classes)
     local enemies_per_quad = 4
     local quadrants = {
         --{ x_start = 0, x_end = 15, y_start = 0, y_end = 15 },  -- Q1: explicitly 0,0 to 15,15
@@ -108,24 +144,26 @@ function init_enemy_units()
                 end
             end
         end
-        shuffle_traversable_tiles(traversable_tiles)
+        SHUFFLE(traversable_tiles)
         for i = 1, enemies_per_quad do
             add(UNITS, {
                 x = traversable_tiles[i].x,
                 y = traversable_tiles[i].y,
                 in_castle = false,
-                sprite = 13 + flr(rnd(3)),
+                sprite = UNIT_STATS[enemy_classes[i]].Sprite,
                 team = "enemy",
-                is_visible = true
+                is_visible = true,
+                class = enemy_classes[i],
+                HP = UNIT_STATS[enemy_classes[i]].HP,
+                Str = UNIT_STATS[enemy_classes[i]].Str,
+                Mag = UNIT_STATS[enemy_classes[i]].Mag,
+                Skl = UNIT_STATS[enemy_classes[i]].Skl,
+                Spd = UNIT_STATS[enemy_classes[i]].Spd,
+                Def = UNIT_STATS[enemy_classes[i]].Def,
+                Mdf = UNIT_STATS[enemy_classes[i]].Mdf,
+                Mov = UNIT_STATS[enemy_classes[i]].Mov
             })
         end
-    end
-end
-
-function shuffle_traversable_tiles(tiles)
-    for i = #tiles, 2, -1 do
-        local j = flr(rnd(i)) + 1
-        tiles[i], tiles[j] = tiles[j], tiles[i]
     end
 end
 
@@ -154,6 +192,19 @@ function draw_nonselected_castle_units()
     draw_units(function(unit)
         return unit.in_castle and unit ~= SELECTED_UNIT
     end)
+end
+
+function draw_selected_unit_flashing(unit, tile_x, tile_y)
+    if t() % 0.5 < 0.4 then
+        if unit.team == "enemy" then
+            pal(12, 8, 0)
+            pal(1, 2, 0)
+        end
+        spr(unit.sprite, (tile_x or unit.x) * 8, (tile_y or unit.y) * 8)
+        if unit.team == "enemy" then
+            pal()
+        end
+    end
 end
 
 function draw_flashing_sprite(sprite, tile_x, tile_y)
