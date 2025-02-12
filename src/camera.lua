@@ -1,32 +1,24 @@
-function update_camera(cursor_x, cursor_y, max_width, max_height)
-    -- Define deadzone boundaries (in tiles)
-    local deadzone_left = 4
-    local deadzone_right = 11
-    local deadzone_top = 4
-    local deadzone_bottom = 11
-
-    -- Calculate cursor position in screen space
-    local cursor_screen_x = cursor_x - flr(CAMERA.x / 8)
-    local cursor_screen_y = cursor_y - flr(CAMERA.y / 8)
-
-    -- Move camera if cursor is outside deadzone
-    if cursor_screen_x < deadzone_left then
-        CAMERA.x = (cursor_x - deadzone_left) * 8
-    elseif cursor_screen_x > deadzone_right then
-        CAMERA.x = (cursor_x - deadzone_right) * 8
+local function update_axis(pos, screen_pos, deadzone_min, deadzone_max)
+    if screen_pos < deadzone_min then
+        return (pos - deadzone_min) * 8
+    elseif screen_pos > deadzone_max then
+        return (pos - deadzone_max) * 8
     end
+    return nil
+end
 
-    if cursor_screen_y < deadzone_top then
-        CAMERA.y = (cursor_y - deadzone_top) * 8
-    elseif cursor_screen_y > deadzone_bottom then
-        CAMERA.y = (cursor_y - deadzone_bottom) * 8
-    end
+function update_camera(cx, cy, mw, mh)
+    local deadzone = {left=4, right=11, top=4, bottom=11}
+    local csx = cx - flr(CAMERA.x / 8)
+    local csy = cy - flr(CAMERA.y / 8)
+
+    CAMERA.x = update_axis(cx, csx, deadzone.left, deadzone.right) or CAMERA.x
+    CAMERA.y = update_axis(cy, csy, deadzone.bottom, deadzone.top) or CAMERA.y
 
     -- Clamp camera to map boundaries
-    CAMERA.x = mid(0, CAMERA.x, (max_width * 8) - 128)
-    CAMERA.y = mid(0, CAMERA.y, (max_height * 8) - 128)
+    CAMERA.x = mid(0, CAMERA.x, (mw * 8) - 128)
+    CAMERA.y = mid(0, CAMERA.y, (mh * 8) - 128)
 
-    -- Update camera position
     camera(CAMERA.x, CAMERA.y)
 end
 

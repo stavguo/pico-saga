@@ -52,7 +52,7 @@ fsm.states.overworld = setmetatable({
         -- Select castle or unit
         if btnp(4) then -- "Select" button
             local castle = get_castle_at(CURSOR.x, CURSOR.y)
-            local unit = get_unit_at(CURSOR.x, CURSOR.y)
+            local unit = get_unit_at(CURSOR.x, CURSOR.y, SELECTED_CASTLE)
             if castle and SELECTED_CASTLE == nil then
                 SELECTED_CASTLE = castle
                 enter_castle() -- Call this to handle camera and cursor adjustment
@@ -148,7 +148,7 @@ fsm.states.move_unit = setmetatable({
     
         -- Select tile to move to
         if btnp(4) then -- "Select" button
-            local unit_at_tile = get_unit_at(CURSOR.x, CURSOR.y)
+            local unit_at_tile = get_unit_at(CURSOR.x, CURSOR.y, false)
             if not unit_at_tile then
                 -- TODO: temp place unit here (maybe use cursor pos?)
                 fsm:change_state("action_menu")
@@ -192,9 +192,11 @@ fsm.states.action_menu = setmetatable({
             elseif selected_item == "Item" then
                 fsm:change_state("item")
             elseif selected_item == "Standby" then
-                SELECTED_UNIT.x = CURSOR.x
-                SELECTED_UNIT.y = CURSOR.y
-                if (SELECTED_UNIT.in_castle) SELECTED_UNIT.in_castle = false
+                if (SELECTED_UNIT.in_castle) then
+                    deploy_unit(SELECTED_UNIT, CURSOR.x, CURSOR.y)
+                else
+                    move_unit(SELECTED_UNIT, CURSOR.x, CURSOR.y)
+                end
                 SELECTED_CASTLE = nil
                 fsm:change_state("overworld")
             end

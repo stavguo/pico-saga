@@ -1,10 +1,24 @@
-function get_unit_at(x, y)
-    for _, unit in pairs(UNITS) do
-        if unit.x == x and unit.y == y then
-            return unit
-        end
+function get_unit_at(x, y, in_castle)
+    if in_castle then
+        return PLAYER_CASTLE_UNITS[x..","..y]
     end
-    return nil
+    return PLAYER_UNITS[x..","..y] or ENEMY_UNITS[x..","..y]
+end
+
+function move_unit(unit, to_x, to_y)
+    local from_key = unit.x..","..unit.y
+    local to_key = to_x..","..to_y
+    if unit.team == "player" then
+        PLAYER_UNITS[to_key], PLAYER_UNITS[from_key] = unit
+    elseif unit.team == "enemy" then
+        ENEMY_UNITS[to_key], ENEMY_UNITS[from_key] = unit
+    end
+    unit.x, unit.y = to_x, to_y
+end
+
+function deploy_unit(unit, to_x, to_y)
+    PLAYER_UNITS[to_x..","..to_y], PLAYER_CASTLE_UNITS[unit.x..","..unit.y] = unit
+    unit.x, unit.y, unit.in_castle = to_x, to_y, false
 end
 
 function get_neighbors(x, y, max_width, max_height)
@@ -73,7 +87,7 @@ function init_player_units()
     local leader_idx = flr(rnd(9)) + 1
     -- Place leader
     local throne = rnd(1) < 0.5 and 7 or 8
-    add(UNITS, {
+    PLAYER_CASTLE_UNITS[throne..","..1] = {
         x = throne, y = 1, in_castle = true,
         sprite = UNIT_STATS[player_classes[leader_idx]].Sprite,
         team = "player",
@@ -87,7 +101,7 @@ function init_player_units()
         Def = UNIT_STATS[player_classes[leader_idx]].Def,
         Mdf = UNIT_STATS[player_classes[leader_idx]].Mdf,
         Mov = UNIT_STATS[player_classes[leader_idx]].Mov
-    })
+    }
 
     -- Place 8 units in formation
     count = 0
@@ -96,9 +110,11 @@ function init_player_units()
             local row = flr(count / 4)
             local pos = count % 4
             local is_right = pos >= 2
-            add(UNITS, {
-                x = is_right and (11 + (pos - 2) * 2) or (2 + pos * 2),
-                y = 2 + row * 2,
+            local x = is_right and (11 + (pos - 2) * 2) or (2 + pos * 2)
+            local y = 2 + row * 2
+            PLAYER_CASTLE_UNITS[x..","..y] = {
+                x = x,
+                y = y,
                 in_castle = true,
                 sprite = UNIT_STATS[player_classes[i]].Sprite,
                 team = "player",
@@ -112,7 +128,7 @@ function init_player_units()
                 Def = UNIT_STATS[player_classes[i]].Def,
                 Mdf = UNIT_STATS[player_classes[i]].Mdf,
                 Mov = UNIT_STATS[player_classes[i]].Mov
-            })
+            }
             count = count + 1
         end
     end
@@ -134,7 +150,7 @@ function init_enemy_units()
     }
 
     -- Find largest square in each quadrant
-    for i, quad in ipairs(quadrants) do
+    for quad in all(quadrants) do
         local traversable_tiles = {}
         for y = quad.y_start, quad.y_end do
             for x = quad.x_start, quad.x_end do
@@ -146,9 +162,11 @@ function init_enemy_units()
         end
         SHUFFLE(traversable_tiles)
         for i = 1, enemies_per_quad do
-            add(UNITS, {
-                x = traversable_tiles[i].x,
-                y = traversable_tiles[i].y,
+            local x = traversable_tiles[i].x
+            local y = traversable_tiles[i].y
+            ENEMY_UNITS[x..","..y] = {
+                x = x,
+                y = y,
                 in_castle = false,
                 sprite = UNIT_STATS[enemy_classes[i]].Sprite,
                 team = "enemy",
@@ -162,24 +180,25 @@ function init_enemy_units()
                 Def = UNIT_STATS[enemy_classes[i]].Def,
                 Mdf = UNIT_STATS[enemy_classes[i]].Mdf,
                 Mov = UNIT_STATS[enemy_classes[i]].Mov
-            })
+            }
         end
     end
 end
 
 function draw_units(filter_func)
-    for _, unit in pairs(UNITS) do
+    for _, unit in pairs(PLAYER_UNITS) do
         if filter_func(unit) then
-            if unit.team == "enemy" then
-                pal(12, 8, 0)
-                pal(1, 2, 0)
-            end
             spr(unit.sprite, unit.x * 8, unit.y * 8)
-            if unit.team == "enemy" then
-                pal()
-            end
         end
     end
+    pal(12, 8, 0)
+    pal(1, 2, 0)
+    for _, unit in pairs(ENEMY_UNITS) do
+        if filter_func(unit) then
+            spr(unit.sprite, unit.x * 8, unit.y * 8)
+        end
+    end
+    pal()
 end
 
 function draw_nonselected_overworld_units()
@@ -189,9 +208,11 @@ function draw_nonselected_overworld_units()
 end
 
 function draw_nonselected_castle_units()
-    draw_units(function(unit)
-        return unit.in_castle and unit ~= SELECTED_UNIT
-    end)
+    for _, unit in pairs(PLAYER_CASTLE_UNITS) do
+        if unit ~= SELECTED_UNIT then
+            spr(unit.sprite, unit.x * 8, unit.y * 8)
+        end
+    end
 end
 
 function draw_selected_unit_flashing(unit, tile_x, tile_y)

@@ -42,35 +42,18 @@ end
 function draw_ui()
     local cx = CURSOR.x - flr(CAMERA.x / 8)
     local cy = CURSOR.y - flr(CAMERA.y / 8)
-    local left = cx < SCREEN_TILES_WIDTH / 2
-    local top = cy < SCREEN_TILES_HEIGHT / 2
+    local left = cx < 8
+    local top = cy < 8
 
     for i, ui in ipairs(UI_STACK) do
-        -- First menu: opposite side of cursor, always top
-        if i == 1 then
-            ui.anchor = left and "top-right" or "top-left"
-        -- Second menu: opposite side of cursor, always bottom
-        elseif i == 2 then
-            ui.anchor = left and "bottom-right" or "bottom-left"
-        -- Third menu: same side as cursor, opposite vertical position
-        elseif i == 3 then
-            ui.anchor = left and 
-                (top and "bottom-left" or "top-left") or
-                (top and "bottom-right" or "top-right")
-        end
+        local anchor = i == 1 and (left and "tr" or "tl") or
+                       i == 2 and (left and "br" or "bl") or
+                       (left and (top and "bl" or "tl") or (top and "br" or "tr"))
 
-        -- Draw UI items
         for j, item in ipairs(ui.items) do
-            local text_w = #item * 4
-            local is_left = ui.anchor == "top-left" or ui.anchor == "bottom-left"
-            local is_top = ui.anchor == "top-left" or ui.anchor == "top-right"
-            
-            local x = is_left and (CAMERA.x + 8) 
-                or (CAMERA.x + SCREEN_TILES_WIDTH * 8 - text_w - 8)
-            local y = is_top and (CAMERA.y + 8 + (j-1) * 8)
-                or (CAMERA.y + SCREEN_TILES_HEIGHT * 8 - 8 - (#ui.items - j) * 8)
-
-            rectfill(x - 1, y - 1, x + text_w, y + 4, 0)
+            local x = (anchor == "tl" or anchor == "bl") and (CAMERA.x + 8) or (CAMERA.x + 120 - #item * 4)
+            local y = (anchor == "tl" or anchor == "tr") and (CAMERA.y + 8 + (j-1)*8) or (CAMERA.y + 120 - (#ui.items - j)*8)
+            rectfill(x-1, y-1, x + #item*4, y+4, 0)
             color(ui.selected > 0 and j == ui.selected and 9 or 7)
             print(item, x, y)
         end

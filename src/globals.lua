@@ -26,7 +26,9 @@ CAMERA = {
     y = 0
 }
 
-UNITS = {}
+PLAYER_UNITS = {}
+PLAYER_CASTLE_UNITS = {}
+ENEMY_UNITS = {}
 
 GAME_STATE = "world"
 IN_CASTLE = false
