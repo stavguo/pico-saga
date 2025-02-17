@@ -15,7 +15,7 @@ end
 function _init()
     -- Initialize terrain and castles
     local seed, noise_fn = init_noise()
-    init_terrain_renderer(noise_fn)
+    init_terrain(noise_fn)
     init_castles()
     init_player_units()
     init_enemy_units()
@@ -30,5 +30,6 @@ end
 
 function _draw()
     cls()
+    map()
     fsm:draw()
 end

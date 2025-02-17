@@ -1,3 +1,22 @@
+function create_unit(x, y, class, team, in_castle)
+    return {
+        x = x,
+        y = y,
+        in_castle = in_castle,
+        sprite = UNIT_STATS[class].Sprite,
+        team = team,
+        class = class,
+        HP = UNIT_STATS[class].HP,
+        Str = UNIT_STATS[class].Str,
+        Mag = UNIT_STATS[class].Mag,
+        Skl = UNIT_STATS[class].Skl,
+        Spd = UNIT_STATS[class].Spd,
+        Def = UNIT_STATS[class].Def,
+        Mdf = UNIT_STATS[class].Mdf,
+        Mov = UNIT_STATS[class].Mov
+    }
+end
+
 function get_unit_at(x, y, in_castle)
     if in_castle then
         return PLAYER_CASTLE_UNITS[x..","..y]
@@ -47,30 +66,21 @@ function find_traversable_tiles(start_x, start_y, movement, unit_team)
     local costs = {}
     costs[start_x..","..start_y] = 0
 
-    -- Query all castles to get their positions
-    local castle_positions = {}
-    for _, castle in pairs(CASTLES) do
-        castle_positions[castle.x..","..castle.y] = true
-    end
-
     while #frontier > 0 do
         local current = deli(frontier, 1)
-        local neighbors = get_neighbors(current.x, current.y, MAP_WIDTH, MAP_HEIGHT)
-
+        local neighbors = get_neighbors(current.x, current.y, 32, 32)
         for _, n in pairs(neighbors) do
             local key = n.x..","..n.y
-            if not castle_positions[key] then
-                local terrain = get_terrain_at(n.x, n.y)
-                if terrain and terrain.cost then
-                    local new_cost = costs[current.x..","..current.y] + terrain.cost
-                    if new_cost <= movement and (not costs[key] or new_cost < costs[key]) then
-                        -- Check if the tile is occupied by an opposing unit
-                        local unit_at_tile = get_unit_at(n.x, n.y)
-                        if not unit_at_tile or unit_at_tile.team == unit_team then
-                            costs[key] = new_cost
-                            add(frontier, n)
-                            TRAVERSABLE_TILES[key] = true
-                        end
+            local cost = TERRAIN_COSTS[mget(n.x, n.y)]
+            if cost then
+                local new_cost = costs[current.x..","..current.y] + cost
+                if new_cost <= movement and (not costs[key] or new_cost < costs[key]) then
+                    -- Check if the tile is occupied by an opposing unit
+                    local unit_at_tile = get_unit_at(n.x, n.y)
+                    if not unit_at_tile or unit_at_tile.team == unit_team then
+                        costs[key] = new_cost
+                        add(frontier, n)
+                        TRAVERSABLE_TILES[key] = true
                     end
                 end
             end
@@ -87,48 +97,19 @@ function init_player_units()
     local leader_idx = flr(rnd(9)) + 1
     -- Place leader
     local throne = rnd(1) < 0.5 and 7 or 8
-    PLAYER_CASTLE_UNITS[throne..","..1] = {
-        x = throne, y = 1, in_castle = true,
-        sprite = UNIT_STATS[player_classes[leader_idx]].Sprite,
-        team = "player",
-        is_visible = true,
-        class = player_classes[leader_idx],
-        HP = UNIT_STATS[player_classes[leader_idx]].HP,
-        Str = UNIT_STATS[player_classes[leader_idx]].Str,
-        Mag = UNIT_STATS[player_classes[leader_idx]].Mag,
-        Skl = UNIT_STATS[player_classes[leader_idx]].Skl,
-        Spd = UNIT_STATS[player_classes[leader_idx]].Spd,
-        Def = UNIT_STATS[player_classes[leader_idx]].Def,
-        Mdf = UNIT_STATS[player_classes[leader_idx]].Mdf,
-        Mov = UNIT_STATS[player_classes[leader_idx]].Mov
-    }
+    
+    PLAYER_CASTLE_UNITS[throne..","..1] = create_unit(throne, 1, player_classes[leader_idx], "player", true)
 
     -- Place 8 units in formation
     count = 0
     for i = 1, 9 do
         if i ~= leader_idx then
-            local row = flr(count / 4)
+            local row = (count \ 4)
             local pos = count % 4
             local is_right = pos >= 2
             local x = is_right and (11 + (pos - 2) * 2) or (2 + pos * 2)
             local y = 2 + row * 2
-            PLAYER_CASTLE_UNITS[x..","..y] = {
-                x = x,
-                y = y,
-                in_castle = true,
-                sprite = UNIT_STATS[player_classes[i]].Sprite,
-                team = "player",
-                is_visible = true,
-                class = player_classes[i],
-                HP = UNIT_STATS[player_classes[i]].HP,
-                Str = UNIT_STATS[player_classes[i]].Str,
-                Mag = UNIT_STATS[player_classes[i]].Mag,
-                Skl = UNIT_STATS[player_classes[i]].Skl,
-                Spd = UNIT_STATS[player_classes[i]].Spd,
-                Def = UNIT_STATS[player_classes[i]].Def,
-                Mdf = UNIT_STATS[player_classes[i]].Mdf,
-                Mov = UNIT_STATS[player_classes[i]].Mov
-            }
+            PLAYER_CASTLE_UNITS[x..","..y] = create_unit(x, y, player_classes[i], "player", true)
             count = count + 1
         end
     end
@@ -154,8 +135,8 @@ function init_enemy_units()
         local traversable_tiles = {}
         for y = quad.y_start, quad.y_end do
             for x = quad.x_start, quad.x_end do
-                local terrain = get_terrain_at(x, y)
-                if terrain.cost ~= nil then
+                local terrain = mget(x, y)
+                if terrain ~= 6 and terrain ~= 7 then
                     add(traversable_tiles, {x = x, y = y})
                 end
             end
@@ -164,47 +145,25 @@ function init_enemy_units()
         for i = 1, enemies_per_quad do
             local x = traversable_tiles[i].x
             local y = traversable_tiles[i].y
-            ENEMY_UNITS[x..","..y] = {
-                x = x,
-                y = y,
-                in_castle = false,
-                sprite = UNIT_STATS[enemy_classes[i]].Sprite,
-                team = "enemy",
-                is_visible = true,
-                class = enemy_classes[i],
-                HP = UNIT_STATS[enemy_classes[i]].HP,
-                Str = UNIT_STATS[enemy_classes[i]].Str,
-                Mag = UNIT_STATS[enemy_classes[i]].Mag,
-                Skl = UNIT_STATS[enemy_classes[i]].Skl,
-                Spd = UNIT_STATS[enemy_classes[i]].Spd,
-                Def = UNIT_STATS[enemy_classes[i]].Def,
-                Mdf = UNIT_STATS[enemy_classes[i]].Mdf,
-                Mov = UNIT_STATS[enemy_classes[i]].Mov
-            }
+            ENEMY_UNITS[x..","..y] = create_unit(x, y, enemy_classes[i], "enemy", false)
         end
     end
 end
 
-function draw_units(filter_func)
+function draw_nonselected_overworld_units()
     for _, unit in pairs(PLAYER_UNITS) do
-        if filter_func(unit) then
+        if not unit.in_castle and unit ~= SELECTED_UNIT then
             spr(unit.sprite, unit.x * 8, unit.y * 8)
         end
     end
     pal(12, 8, 0)
     pal(1, 2, 0)
     for _, unit in pairs(ENEMY_UNITS) do
-        if filter_func(unit) then
+        if not unit.in_castle and unit ~= SELECTED_UNIT then
             spr(unit.sprite, unit.x * 8, unit.y * 8)
         end
     end
     pal()
-end
-
-function draw_nonselected_overworld_units()
-    draw_units(function(unit)
-        return not unit.in_castle and unit ~= SELECTED_UNIT
-    end)
 end
 
 function draw_nonselected_castle_units()

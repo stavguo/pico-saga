@@ -20,7 +20,7 @@ for file in "$dir"/*; do
     filename=$(basename "$file")
     
     # Prepend the filename and append the file contents
-    all_contents+="=== File: $filename ===\n"
+    all_contents+="-- File: $filename\n"
     all_contents+="$(cat "$file")\n\n"
   fi
 done

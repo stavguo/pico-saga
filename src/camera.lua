@@ -1,25 +1,24 @@
-local function update_axis(pos, screen_pos, deadzone_min, deadzone_max)
-    if screen_pos < deadzone_min then
-        return (pos - deadzone_min) * 8
-    elseif screen_pos > deadzone_max then
-        return (pos - deadzone_max) * 8
-    end
-    return nil
+function update_camera(cx, cy)
+    -- Define deadzone boundaries (in tiles)
+    local dl, dr, dt, db = 4, 11, 4, 11
+    -- Calculate cursor position in screen space
+    local csx, csy = cx - (CAMERA.x \ 8), cy - (CAMERA.y \ 8)
+    -- Move camera if cursor is outside deadzone
+    if (csx < dl) CAMERA.x = (cx - dl) * 8
+    if (csx > dr) CAMERA.x = (cx - dr) * 8
+    if (csy < dt) CAMERA.y = (cy - dt) * 8
+    if (csy > db) CAMERA.y = (cy - db) * 8
+    -- Clamp camera to map boundaries
+    CAMERA.x, CAMERA.y = mid(0, CAMERA.x, 128), mid(0, CAMERA.y, 128)
+    -- Update camera position
+    camera(CAMERA.x, CAMERA.y)
 end
 
-function update_camera(cx, cy, mw, mh)
-    local deadzone = {left=4, right=11, top=4, bottom=11}
-    local csx = cx - flr(CAMERA.x / 8)
-    local csy = cy - flr(CAMERA.y / 8)
-
-    CAMERA.x = update_axis(cx, csx, deadzone.left, deadzone.right) or CAMERA.x
-    CAMERA.y = update_axis(cy, csy, deadzone.bottom, deadzone.top) or CAMERA.y
-
-    -- Clamp camera to map boundaries
-    CAMERA.x = mid(0, CAMERA.x, (mw * 8) - 128)
-    CAMERA.y = mid(0, CAMERA.y, (mh * 8) - 128)
-
-    camera(CAMERA.x, CAMERA.y)
+function update_cursor(mw, mh)
+    if btnp(0) then CURSOR.x = mid(0, CURSOR.x - 1, mw) end
+    if btnp(1) then CURSOR.x = mid(0, CURSOR.x + 1, mw) end
+    if btnp(2) then CURSOR.y = mid(0, CURSOR.y - 1, mh) end
+    if btnp(3) then CURSOR.y = mid(0, CURSOR.y + 1, mh) end
 end
 
 function draw_cursor(flashing)
@@ -30,9 +29,7 @@ end
 
 function draw_cursor_coords()
     local offset = 8
-    local x = offset + CAMERA.x
-    local y = offset + CAMERA.y
-    local text = "x:" .. CURSOR.x .. " y:" .. CURSOR.y
+    local x, y, text = offset + CAMERA.x, offset + CAMERA.y, "x:" .. CURSOR.x .. " y:" .. CURSOR.y
     rectfill(x - 1, y - 1, x + #text * 4, y + 4, 0)
     color(7)
     print(text, x, y)
@@ -40,21 +37,17 @@ end
 
 function enter_castle()
     -- Store the cursor's screen position before moving the camera
-    local cursor_screen_x = CURSOR.x - flr(CAMERA.x / 8)
-    local cursor_screen_y = CURSOR.y - flr(CAMERA.y / 8)
+    local csx, csy = CURSOR.x - (CAMERA.x \ 8), CURSOR.y - (CAMERA.y \ 8)
 
     -- Move the camera to (0, 0)
-    CAMERA.x = 0
-    CAMERA.y = 0
+    CAMERA.x, CAMERA.y = 0, 0
     camera(CAMERA.x, CAMERA.y)
 
     -- Adjust the cursor's world position to maintain its screen position
-    CURSOR.x = cursor_screen_x + flr(CAMERA.x / 8)
-    CURSOR.y = cursor_screen_y + flr(CAMERA.y / 8)
+    CURSOR.x, CURSOR.y = csx, csy
 end
 
 function exit_castle()
-    CURSOR.x = SELECTED_CASTLE.x
-    CURSOR.y = SELECTED_CASTLE.y
-    update_camera(SELECTED_CASTLE.x, SELECTED_CASTLE.y, MAP_WIDTH, MAP_HEIGHT)
+    CURSOR.x, CURSOR.y = SELECTED_CASTLE.x, SELECTED_CASTLE.y
+    update_camera(SELECTED_CASTLE.x, SELECTED_CASTLE.y)
 end

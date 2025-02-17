@@ -1,14 +1,3 @@
-CASTLES = {}  -- Global table to store castle data
-
-function get_castle_at(x, y)
-    for _, castle in pairs(CASTLES) do
-        if castle.x == x and castle.y == y then
-            return castle
-        end
-    end
-    return nil
-end
-
 -- Find the largest square of grass tiles in a given area
 function find_largest_square(start_x, start_y, width, height, quadrant)
     local dp = {}
@@ -27,8 +16,8 @@ function find_largest_square(start_x, start_y, width, height, quadrant)
 
             local world_x = start_x + x
             local world_y = start_y + y
-            local terrain = get_terrain_at(world_x, world_y)
-            local is_grass = terrain and terrain.sprite == 1
+            local terrain = mget(world_x, world_y)
+            local is_grass = terrain == 1
 
             if not is_grass then
                 dp[y] = 0
@@ -64,8 +53,8 @@ function find_largest_square(start_x, start_y, width, height, quadrant)
 
         for c in all(candidates) do
             local score = 0
-            local quad_center_x = start_x + flr(width / 2)
-            local quad_center_y = start_y + flr(height / 2)
+            local quad_center_x = start_x + (width \ 2)
+            local quad_center_y = start_y + (height \ 2)
 
             if quadrant == 1 then  -- Top-left
                 score = abs(c.x - start_x) + abs(c.y - start_y)
@@ -78,7 +67,7 @@ function find_largest_square(start_x, start_y, width, height, quadrant)
             end
 
             -- Also factor in distance from center to avoid extremes
-            score = score + flr(abs(c.x - quad_center_x) + abs(c.y - quad_center_y)) / 2
+            score = score + (abs(c.x - quad_center_x) + abs(c.y - quad_center_y)) \ 2
 
             if score < best_score then
                 best_score = score
@@ -94,7 +83,7 @@ end
 function get_castle_offset(quadrant, size)
     -- For odd-sized squares, use center placement
     if size % 2 == 1 then
-        return flr(size / 2), flr(size / 2)
+        return (size \ 2), (size \ 2)
     end
 
     -- For even-sized squares, bias based on quadrant
@@ -142,40 +131,23 @@ function init_castles()
         -- Get biased offset based on quadrant
         local offset_x, offset_y = get_castle_offset(spot.quadrant, spot.size)
 
-        -- Create castle data
-        local castle = {
-            x = spot.x + offset_x,
-            y = spot.y + offset_y,
-            is_player = i == 1
-        }
-
-        -- Add castle to global table
-        add(CASTLES, castle)
+        local x = spot.x + offset_x
+        local y = spot.y + offset_y
+        mset(x, y, i == 1 and 8 or 9)
 
         -- Initialize cursor for the player's castle
         if i == 1 then
             CURSOR = {
-                x = castle.x,
-                y = castle.y,
+                x = x,
+                y = y,
                 sprite = 0
             }
         end
     end
 end
 
-function draw_castles()
-    for _, castle in pairs(CASTLES) do
-        local sprite = castle.is_player and 8 or 9  -- Player castle uses sprite 8, others use 9
-        spr(sprite, castle.x * 8, castle.y * 8)
-    end
-end
-
 -- Draw the interior of a castle
 function draw_castle_interior()
-    -- Clear any prior camera offset since we want fixed position
-    camera(0, 0)
-
-    -- Draw the floor tiles (16x16 grid)
     for y = 0, 15 do
         for x = 0, 15 do
             if x == 0 or x == 15 then

@@ -40,8 +40,8 @@ function get_ui_selection()
 end
 
 function draw_ui()
-    local cx = CURSOR.x - flr(CAMERA.x / 8)
-    local cy = CURSOR.y - flr(CAMERA.y / 8)
+    local cx = CURSOR.x - (CAMERA.x \ 8)
+    local cy = CURSOR.y - (CAMERA.y \ 8)
     local left = cx < 8
     local top = cy < 8
 
