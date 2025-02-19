@@ -160,7 +160,7 @@ fsm.states.move_unit = setmetatable({
         -- Select tile to move to
         if btnp(4) then -- "Select" button
             local unit_at_tile = get_unit_at(CURSOR.x, CURSOR.y, false)
-            if not unit_at_tile then
+            if not unit_at_tile or unit_at_tile == SELECTED_UNIT then
                 -- TODO: temp place unit here (maybe use cursor pos?)
                 fsm:change_state("action_menu")
             end
