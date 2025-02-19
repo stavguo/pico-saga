@@ -186,7 +186,12 @@ fsm.states.move_unit = setmetatable({
 
 fsm.states.action_menu = setmetatable({
     enter = function()
-        create_ui({"Attack", "Item", "Standby"}, true)
+        local enemy_positions = bfs(CURSOR.x, CURSOR.y, 2, find_enemy)
+        if next(enemy_positions) ~= nil then
+            create_ui({"Attack", "Item", "Standby"}, true)
+        else
+            create_ui({"Item", "Standby"}, true)
+        end
     end,
     update = function()
         update_ui()

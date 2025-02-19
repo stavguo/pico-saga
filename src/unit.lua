@@ -192,3 +192,52 @@ function draw_flashing_sprite(sprite, tile_x, tile_y)
         spr(sprite, tile_x * 8, tile_y * 8)
     end
 end
+
+-- BFS function
+function bfs(start_x, start_y, max_distance, filter_func)
+    local visited = {}  -- Track visited positions
+    local queue = {}    -- Queue for BFS
+    local results = {}  -- Positions that match the filter
+
+    -- Add the starting position to the queue
+    add(queue, {x = start_x, y = start_y, distance = 0})
+    visited[start_x..","..start_y] = true
+
+    -- Directions for Manhattan distance (4-way movement)
+    local directions = {
+        {x = -1, y =  0},  -- Left
+        {x =  1, y =  0},  -- Right
+        {x =  0, y = -1},  -- Up
+        {x =  0, y =  1}   -- Down
+    }
+
+    -- Perform BFS
+    while #queue > 0 do
+        local current = deli(queue, 1)  -- Dequeue the first element
+        local x, y, distance = current.x, current.y, current.distance
+
+        -- Check if the current position matches the filter
+        if filter_func(x, y) then
+            add(results, {x, y})  -- Add to results
+        end
+
+        -- Explore neighbors if within max distance
+        if distance < max_distance then
+            for _, dir in ipairs(directions) do
+                local nx, ny = x + dir.x, y + dir.y
+
+                -- Check if the neighbor is within bounds and not visited
+                if nx >= 0 and nx < 32 and ny >= 0 and ny < 32 and not visited[nx..","..ny] then
+                    visited[nx..","..ny] = true  -- Mark as visited
+                    add(queue, {x = nx, y = ny, distance = distance + 1})  -- Enqueue
+                end
+            end
+        end
+    end
+
+    return results
+end
+
+function find_enemy(x, y)
+    return ENEMY_UNITS[x..","..y]
+end
