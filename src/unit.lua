@@ -90,9 +90,9 @@ end
 
 function init_player_units()
     local player_classes = {
-        "Sword Soldier", "Sword Soldier", "Sword Soldier",
-        "Spear Soldier", "Spear Soldier", "Spear Soldier",
-        "Axe Soldier", "Axe Soldier", "Axe Soldier"
+        "Sword", "Sword", "Sword",
+        "Lance", "Lance", "Lance",
+        "Axe", "Axe", "Axe"
     }
     local leader_idx = flr(rnd(9)) + 1
     -- Place leader
@@ -117,9 +117,9 @@ end
 
 function init_enemy_units()
     local enemy_classes = {
-        "Sword Soldier", "Sword Soldier", "Sword Soldier", "Sword Soldier",
-        "Spear Soldier", "Spear Soldier", "Spear Soldier", "Spear Soldier",
-        "Axe Soldier", "Axe Soldier", "Axe Soldier", "Axe Soldier"
+        "Sword", "Sword", "Sword", "Sword",
+        "Lance", "Lance", "Lance", "Lance",
+        "Axe", "Axe", "Axe", "Axe"
     }
     SHUFFLE(enemy_classes)
     local enemies_per_quad = 4
@@ -136,7 +136,7 @@ function init_enemy_units()
         for y = quad.y_start, quad.y_end do
             for x = quad.x_start, quad.x_end do
                 local terrain = mget(x, y)
-                if terrain ~= 6 and terrain ~= 7 then
+                if terrain == 1 then
                     add(traversable_tiles, {x = x, y = y})
                 end
             end
@@ -150,47 +150,17 @@ function init_enemy_units()
     end
 end
 
-function draw_nonselected_overworld_units()
-    for _, unit in pairs(PLAYER_UNITS) do
-        if not unit.in_castle and unit ~= SELECTED_UNIT then
-            spr(unit.sprite, unit.x * 8, unit.y * 8)
+-- Convert bfs output (list of {x, y} coordinates) to a list of units
+function get_attackable_units(bfs_output)
+    local attackable_units = {}
+    for _, pos in ipairs(bfs_output) do
+        local key = pos[1] .. "," .. pos[2]  -- Convert {x, y} to "x,y"
+        local unit = ENEMY_UNITS[key]        -- Look up the unit in ENEMY_UNITS
+        if unit then
+            attackable_units[key] = unit      -- Add the unit to the list
         end
     end
-    pal(12, 8, 0)
-    pal(1, 2, 0)
-    for _, unit in pairs(ENEMY_UNITS) do
-        if not unit.in_castle and unit ~= SELECTED_UNIT then
-            spr(unit.sprite, unit.x * 8, unit.y * 8)
-        end
-    end
-    pal()
-end
-
-function draw_nonselected_castle_units()
-    for _, unit in pairs(PLAYER_CASTLE_UNITS) do
-        if unit ~= SELECTED_UNIT then
-            spr(unit.sprite, unit.x * 8, unit.y * 8)
-        end
-    end
-end
-
-function draw_selected_unit_flashing(unit, tile_x, tile_y)
-    if t() % 0.5 < 0.4 then
-        if unit.team == "enemy" then
-            pal(12, 8, 0)
-            pal(1, 2, 0)
-        end
-        spr(unit.sprite, (tile_x or unit.x) * 8, (tile_y or unit.y) * 8)
-        if unit.team == "enemy" then
-            pal()
-        end
-    end
-end
-
-function draw_flashing_sprite(sprite, tile_x, tile_y)
-    if t() % 0.5 < 0.4 then
-        spr(sprite, tile_x * 8, tile_y * 8)
-    end
+    return attackable_units
 end
 
 -- BFS function
@@ -240,4 +210,73 @@ end
 
 function find_enemy(x, y)
     return ENEMY_UNITS[x..","..y]
+end
+
+function hit_chance(attacker, defender)
+    local terrain = mget(defender.x, defender.y)
+    local terrain_effect = TERRAIN_EFFECTS[terrain] or 0
+    local base_hit_rate = 70  -- Example base hit rate
+    local accuracy = base_hit_rate + (attacker.Skl) - (defender.Spd + terrain_effect)
+    return mid(0, accuracy, 100)  -- Clamp between 0% and 100%
+end
+
+function calculate_damage(attacker, defender)
+    local damage = attacker.Str > attacker.Mag and attacker.Str - defender.Def or attacker.Mag - defender.Mdf
+    return max(1, damage)  -- Ensure at least 1 damage
+end
+
+function will_hit(attacker, defender)
+    return flr(rnd(100)) < hit_chance(attacker, defender)
+end
+
+function is_attacker_advantage(attacker, defender)
+    local advantage_classes = WEAPON_TRIANGLE[attacker.class]
+    if advantage_classes then
+        for _, class in ipairs(advantage_classes) do
+            if class == defender.class then
+                return true  -- Attacker has advantage, defender cannot counterattack
+            end
+        end
+    end
+    return false  -- No advantage, defender can counterattack
+end
+
+function draw_units(units, filter, flashing)
+    for _, unit in pairs(units) do
+        if not filter or filter(unit) then
+            draw_unit_at(unit, nil, nil, flashing)
+        end
+    end
+end
+
+function draw_unit_at(unit, x, y, flashing)
+    -- Default to unit's position if x and y are not provided
+    x = x or unit.x
+    y = y or unit.y
+
+    -- Only draw if flashing is false or the flashing condition is met
+    if not flashing or t() % 0.5 < 0.4 then
+        -- Apply palette changes for enemy units
+        if unit.team == "enemy" then
+            pal(12, 8, 0)  -- Change palette for enemy units
+            pal(1, 2, 0)
+        end
+
+        -- Draw the unit's sprite at the specified position
+        spr(unit.sprite, x * 8, y * 8)
+
+        -- Reset palette if it was changed
+        if unit.team == "enemy" then
+            pal()
+        end
+    end
+end
+
+function draw_nonselected_overworld_units(selected)
+    draw_units(ENEMY_UNITS, function (unit)
+        return unit ~= selected
+    end)
+    draw_units(PLAYER_UNITS, function (unit)
+        return unit ~= selected
+    end)
 end
