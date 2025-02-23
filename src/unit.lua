@@ -17,27 +17,27 @@ function create_unit(x, y, class, team, in_castle)
     }
 end
 
-function get_unit_at(x, y, in_castle)
+function get_unit_at(cursor, in_castle)
     if in_castle then
-        return PLAYER_CASTLE_UNITS[x..","..y]
+        return PLAYER_CASTLE_UNITS[cursor.x..","..cursor.y]
     end
-    return PLAYER_UNITS[x..","..y] or ENEMY_UNITS[x..","..y]
+    return PLAYER_UNITS[cursor.x..","..cursor.y] or ENEMY_UNITS[cursor.x..","..cursor.y]
 end
 
-function move_unit(unit, to_x, to_y)
+function move_unit(unit, cursor)
     local from_key = unit.x..","..unit.y
-    local to_key = to_x..","..to_y
+    local to_key = cursor.x..","..cursor.y
     if unit.team == "player" then
         PLAYER_UNITS[to_key], PLAYER_UNITS[from_key] = unit
     elseif unit.team == "enemy" then
         ENEMY_UNITS[to_key], ENEMY_UNITS[from_key] = unit
     end
-    unit.x, unit.y = to_x, to_y
+    unit.x, unit.y = cursor.x, cursor.y
 end
 
-function deploy_unit(unit, to_x, to_y)
-    PLAYER_UNITS[to_x..","..to_y], PLAYER_CASTLE_UNITS[unit.x..","..unit.y] = unit
-    unit.x, unit.y, unit.in_castle = to_x, to_y, false
+function deploy_unit(unit, cursor)
+    PLAYER_UNITS[cursor.x..","..cursor.y], PLAYER_CASTLE_UNITS[unit.x..","..unit.y] = unit
+    unit.x, unit.y, unit.in_castle = cursor.x, cursor.y, false
 end
 
 function get_neighbors(x, y, max_width, max_height)
@@ -58,13 +58,13 @@ function get_neighbors(x, y, max_width, max_height)
     return neighbors
 end
 
-function find_traversable_tiles(start_x, start_y, movement, unit_team)
-    TRAVERSABLE_TILES = {} -- Clear previous tiles
-    TRAVERSABLE_TILES[start_x..","..start_y] = true
+function find_traversable_tiles(cursor, movement, unit_team)
+    traversable_tiles = {} -- Clear previous tiles
+    traversable_tiles[cursor.x..","..cursor.y] = true
 
-    local frontier = {{x = start_x, y = start_y}}
+    local frontier = {{x = cursor.x, y = cursor.y}}
     local costs = {}
-    costs[start_x..","..start_y] = 0
+    costs[cursor.x..","..cursor.y] = 0
 
     while #frontier > 0 do
         local current = deli(frontier, 1)
@@ -76,16 +76,17 @@ function find_traversable_tiles(start_x, start_y, movement, unit_team)
                 local new_cost = costs[current.x..","..current.y] + cost
                 if new_cost <= movement and (not costs[key] or new_cost < costs[key]) then
                     -- Check if the tile is occupied by an opposing unit
-                    local unit_at_tile = get_unit_at(n.x, n.y)
+                    local unit_at_tile = get_unit_at(n)
                     if not unit_at_tile or unit_at_tile.team == unit_team then
                         costs[key] = new_cost
                         add(frontier, n)
-                        TRAVERSABLE_TILES[key] = true
+                        traversable_tiles[key] = true
                     end
                 end
             end
         end
     end
+    return traversable_tiles
 end
 
 function init_player_units()
@@ -166,14 +167,14 @@ function get_attackable_units(bfs_output)
 end
 
 -- BFS function
-function bfs(start_x, start_y, max_distance, filter_func)
+function bfs(cursor, max_distance, filter_func)
     local visited = {}  -- Track visited positions
     local queue = {}    -- Queue for BFS
     local results = {}  -- Positions that match the filter
 
     -- Add the starting position to the queue
-    add(queue, {x = start_x, y = start_y, distance = 0})
-    visited[start_x..","..start_y] = true
+    add(queue, {x = cursor.x, y = cursor.y, distance = 0})
+    visited[cursor.x..","..cursor.y] = true
 
     -- Directions for Manhattan distance (4-way movement)
     local directions = {

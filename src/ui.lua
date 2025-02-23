@@ -39,9 +39,9 @@ function get_ui_selection()
     return nil
 end
 
-function draw_ui()
-    local cx = CURSOR.x - (CAMERA.x \ 8)
-    local cy = CURSOR.y - (CAMERA.y \ 8)
+function draw_ui(cursor)
+    local cx = cursor.x - (peek2(0x5f28) \ 8)
+    local cy = cursor.y - (peek2(0x5f2a) \ 8)
     local left = cx < 8
     local top = cy < 8
 
@@ -51,8 +51,8 @@ function draw_ui()
                        (left and (top and "bl" or "tl") or (top and "br" or "tr"))
 
         for j, item in ipairs(ui.items) do
-            local x = (anchor == "tl" or anchor == "bl") and (CAMERA.x + 8) or (CAMERA.x + 120 - #item * 4)
-            local y = (anchor == "tl" or anchor == "tr") and (CAMERA.y + 8 + (j-1)*8) or (CAMERA.y + 120 - (#ui.items - j)*8)
+            local x = (anchor == "tl" or anchor == "bl") and (peek2(0x5f28) + 8) or (peek2(0x5f28) + 120 - #item * 4)
+            local y = (anchor == "tl" or anchor == "tr") and (peek2(0x5f2a) + 8 + (j-1)*8) or (peek2(0x5f2a) + 120 - (#ui.items - j)*8)
             rectfill(x-1, y-1, x + #item*4, y+4, 0)
             color(ui.selected > 0 and j == ui.selected and 9 or 7)
             print(item, x, y)

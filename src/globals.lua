@@ -10,33 +10,25 @@ TERRAIN_COSTS = {
     [9] = nil -- ENEMY CASTLE
 }
 
+-- Terrain Effects on Hit Rate
+TERRAIN_EFFECTS = {
+    [1] = 0,   -- Plains: no effect
+    [3] = 10, -- Forest: -10% hit rate
+    [4] = 15, -- Thicket: -15% hit rate
+    [2] = 5,  -- Shoal: -5% hit rate
+    [5] = 5,  -- Sand: -5% hit rate
+    [6] = 20, -- Sea: -20% hit rate (unlikely to attack from here)
+    [7] = 20, -- Mountain: -20% hit rate (unlikely to attack from here)
+    [8] = 0,   -- Player Castle: no effect
+    [9] = 0    -- Enemy Castle: no effect
+}
+
 LAYERS = {
     { 1 / 16, 1 },
     { 1 / 8,  1 / 2 },
     { 1 / 4,  1 / 4 },
     { 1 / 2,  1 / 8 }
 }
-
-CAMERA = {
-    x = 0,
-    y = 0
-}
-
-PLAYER_UNITS = {}
-PLAYER_CASTLE_UNITS = {}
-ENEMY_UNITS = {}
-
-CURSOR = nil
-TRAVERSABLE_TILES = {}
-
-UI_STACK = {}
-
-function SHUFFLE(items)
-    for i = #items, 2, -1 do
-        local j = flr(rnd(i)) + 1
-        items[i], items[j] = items[j], items[i]
-    end
-end
 
 UNIT_STATS = {
     ["Lance"] = { Sprite = 14, HP = 30, Str = 20, Mag = 0, Skl = 5, Spd = 5, Def = 5, Mdf = 0, Mov = 6 },
@@ -49,25 +41,24 @@ UNIT_STATS = {
 }
 
 -- Weapon Triangle Matchups
-local WEAPON_TRIANGLE = {
+WEAPON_TRIANGLE = {
     ["Sword"] = {"Axe"},
     ["Axe"] = {"Lance"},
     ["Lance"] = {"Sword"},
     ["Monk"] = {"Archer", "Mage", "Thief"}
 }
 
--- Terrain Effects on Hit Rate
-local TERRAIN_EFFECTS = {
-    [1] = 0,   -- Plains: no effect
-    [3] = 10, -- Forest: -10% hit rate
-    [4] = 15, -- Thicket: -15% hit rate
-    [2] = 5,  -- Shoal: -5% hit rate
-    [5] = 5,  -- Sand: -5% hit rate
-    [6] = 20, -- Sea: -20% hit rate (unlikely to attack from here)
-    [7] = 20, -- Mountain: -20% hit rate (unlikely to attack from here)
-    [8] = 0,   -- Player Castle: no effect
-    [9] = 0    -- Enemy Castle: no effect
-}
+PLAYER_UNITS = {}
+PLAYER_CASTLE_UNITS = {}
+ENEMY_UNITS = {}
+UI_STACK = {}
+
+function SHUFFLE(items)
+    for i = #items, 2, -1 do
+        local j = flr(rnd(i)) + 1
+        items[i], items[j] = items[j], items[i]
+    end
+end
 
 ENEMY_INDEX = nil
 ENEMY_POSITIONS = {}
