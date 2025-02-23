@@ -47,7 +47,7 @@ function enter_castle()
     CURSOR.x, CURSOR.y = csx, csy
 end
 
-function exit_castle()
-    CURSOR.x, CURSOR.y = SELECTED_CASTLE.x, SELECTED_CASTLE.y
-    update_camera(SELECTED_CASTLE.x, SELECTED_CASTLE.y)
+function exit_castle(castle_x, castle_y)
+    CURSOR.x, CURSOR.y = castle_x, castle_y
+    update_camera(castle_x, castle_y)
 end

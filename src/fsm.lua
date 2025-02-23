@@ -7,6 +7,8 @@ local base_state = {
 
 fsm = {
     current_state = "overworld",
+    selected_unit = nil,
+    selected_castle = nil,
     states = {},
     change_state = function(self, new_state, payload)
         if self.states[self.current_state].exit then
@@ -31,8 +33,8 @@ fsm = {
 
 fsm.states.overworld = setmetatable({
     enter = function()
-        if (SELECTED_UNIT) SELECTED_UNIT = nil
-        if (SELECTED_CASTLE) SELECTED_CASTLE = nil
+        if (fsm.selected_unit) fsm.selected_unit = nil
+        if (fsm.selected_castle) fsm.selected_castle = nil
     end,
     update = function()
         -- Move cursor
@@ -46,13 +48,13 @@ fsm.states.overworld = setmetatable({
             local castle = mget(CURSOR.x, CURSOR.y)
             local unit = get_unit_at(CURSOR.x, CURSOR.y)
             if castle == 8 then
-                SELECTED_CASTLE = {
+                fsm.selected_castle = {
                     x = CURSOR.x,
                     y = CURSOR.y,
                 }
                 fsm:change_state("castle")
             elseif unit then
-                SELECTED_UNIT = unit
+                fsm.selected_unit = unit
                 fsm:change_state("unit_info")
             end
         end
@@ -71,7 +73,7 @@ fsm.states.overworld = setmetatable({
 fsm.states.castle = setmetatable({
     enter = function()
         enter_castle()
-        if (SELECTED_UNIT) SELECTED_UNIT = nil
+        if (fsm.selected_unit) fsm.selected_unit = nil
     end,
     update = function()
         -- Move cursor
@@ -79,13 +81,13 @@ fsm.states.castle = setmetatable({
 
         -- Select unit
         if btnp(4) then -- "Select" button
-            local unit = get_unit_at(CURSOR.x, CURSOR.y, SELECTED_CASTLE)
+            local unit = get_unit_at(CURSOR.x, CURSOR.y, true)
             if unit then
-                SELECTED_UNIT = unit
+                fsm.selected_unit = unit
                 fsm:change_state("unit_info")
             end
         elseif btnp(5) then -- "Back" button
-            exit_castle()
+            exit_castle(fsm.selected_castle.x, fsm.selected_castle.y)
             fsm:change_state("overworld")
         end
     end,
@@ -101,21 +103,21 @@ fsm.states.castle = setmetatable({
 fsm.states.unit_info = setmetatable({
     enter = function()
         create_ui({
-            SELECTED_UNIT.class
+            fsm.selected_unit.class
         }, false)
         create_ui({
-            "HP: " .. SELECTED_UNIT.HP .. " Spd: " .. SELECTED_UNIT.Spd,
-            "Str: " .. SELECTED_UNIT.Str .. " Def: " .. SELECTED_UNIT.Def,
-            "Mag: " .. SELECTED_UNIT.Mag .. " Mdf: " .. SELECTED_UNIT.Mdf,
-            "Skl: " .. SELECTED_UNIT.Skl .. " Mov: " .. SELECTED_UNIT.Mov
+            "HP: " .. fsm.selected_unit.HP .. " Spd: " .. fsm.selected_unit.Spd,
+            "Str: " .. fsm.selected_unit.Str .. " Def: " .. fsm.selected_unit.Def,
+            "Mag: " .. fsm.selected_unit.Mag .. " Mdf: " .. fsm.selected_unit.Mdf,
+            "Skl: " .. fsm.selected_unit.Skl .. " Mov: " .. fsm.selected_unit.Mov
         }, false)
     end,
     update = function()
         if btnp(0) or btnp(1) or btnp(2) or btnp(3) then
-            if (SELECTED_CASTLE) exit_castle()
+            if (fsm.selected_castle) exit_castle(fsm.selected_castle.x, fsm.selected_castle.y)
             fsm:change_state("move_unit")
         elseif btnp(5) then -- "Back" button
-            if SELECTED_CASTLE then
+            if fsm.selected_castle then
                 fsm:change_state("castle")
             else
                 fsm:change_state("overworld")
@@ -123,15 +125,15 @@ fsm.states.unit_info = setmetatable({
         end
     end,
     draw = function()
-        if SELECTED_CASTLE then
+        if fsm.selected_castle then
             draw_castle_interior()
             draw_units(PLAYER_CASTLE_UNITS, function (unit)
-                return unit ~= SELECTED_UNIT
+                return unit ~= fsm.selected_unit
             end)
         else
-            draw_nonselected_overworld_units(SELECTED_UNIT)
+            draw_nonselected_overworld_units(fsm.selected_unit)
         end
-        draw_unit_at(SELECTED_UNIT, nil, nil, true)
+        draw_unit_at(fsm.selected_unit, nil, nil, true)
         draw_cursor(true)
         draw_ui()
     end,
@@ -143,7 +145,7 @@ fsm.states.unit_info = setmetatable({
 fsm.states.move_unit = setmetatable({
     enter = function()
         -- Show traversable tiles
-        find_traversable_tiles(CURSOR.x, CURSOR.y, 5, SELECTED_UNIT.team)
+        find_traversable_tiles(CURSOR.x, CURSOR.y, 5, fsm.selected_unit.team)
     end,
     update = function()
         -- Store the current cursor position
@@ -165,7 +167,7 @@ fsm.states.move_unit = setmetatable({
         -- Select tile to move to
         if btnp(4) then -- "Select" button
             local unit_at_tile = get_unit_at(CURSOR.x, CURSOR.y, false)
-            if not unit_at_tile or unit_at_tile == SELECTED_UNIT then
+            if not unit_at_tile or unit_at_tile == fsm.selected_unit then
                 -- TODO: temp place unit here (maybe use cursor pos?)
                 fsm:change_state("action_menu")
             end
@@ -175,11 +177,11 @@ fsm.states.move_unit = setmetatable({
         end
     end,
     draw = function()
-        draw_nonselected_overworld_units(SELECTED_UNIT)
-        if SELECTED_CASTLE then
-            draw_unit_at(SELECTED_UNIT, SELECTED_CASTLE.x, SELECTED_CASTLE.y, true)
+        draw_nonselected_overworld_units(fsm.selected_unit)
+        if fsm.selected_castle then
+            draw_unit_at(fsm.selected_unit, fsm.selected_castle.x, fsm.selected_castle.y, true)
         else
-            draw_unit_at(SELECTED_UNIT, nil, nil, true)
+            draw_unit_at(fsm.selected_unit, nil, nil, true)
         end
         draw_cursor(true)
         draw_cursor_coords()
@@ -207,26 +209,26 @@ fsm.states.action_menu = setmetatable({
             elseif selected_item == "Item" then
                 fsm:change_state("item")
             elseif selected_item == "Standby" then
-                if (SELECTED_UNIT.in_castle) then
-                    deploy_unit(SELECTED_UNIT, CURSOR.x, CURSOR.y)
+                if (fsm.selected_unit.in_castle) then
+                    deploy_unit(fsm.selected_unit, CURSOR.x, CURSOR.y)
                 else
-                    move_unit(SELECTED_UNIT, CURSOR.x, CURSOR.y)
+                    move_unit(fsm.selected_unit, CURSOR.x, CURSOR.y)
                 end
                 fsm:change_state("overworld")
             end
         end
         if btnp(5) then
-            if SELECTED_CASTLE then
-                CURSOR.x = SELECTED_CASTLE.x
-                CURSOR.y = SELECTED_CASTLE.y
+            if fsm.selected_castle then
+                CURSOR.x = fsm.selected_castle.x
+                CURSOR.y = fsm.selected_castle.y
                 update_camera(CURSOR.x, CURSOR.y)
             end
-            fsm:change_state("move_unit")
+            fsm:change_state("move_unit", {})
         end
     end,
     draw = function()
-        draw_nonselected_overworld_units(SELECTED_UNIT)
-        draw_unit_at(SELECTED_UNIT, CURSOR.x, CURSOR.y, true)
+        draw_nonselected_overworld_units(fsm.selected_unit)
+        draw_unit_at(fsm.selected_unit, CURSOR.x, CURSOR.y, true)
         draw_ui()
     end,
     exit = function()
@@ -257,15 +259,15 @@ fsm.states.attack_menu = setmetatable({
 
             if enemy then
                 -- Set up combat
-                -- attacker, defender, is_counter = SELECTED_UNIT, enemy, false
+                -- attacker, defender, is_counter = fsm.selected_unit, enemy, false
                 printh("cursor after: "..initial_cursor_x..", "..initial_cursor_y, "fe4_debug.txt")
-                if SELECTED_UNIT.in_castle then
-                    deploy_unit(SELECTED_UNIT, initial_cursor_x, initial_cursor_y)
+                if fsm.selected_unit.in_castle then
+                    deploy_unit(fsm.selected_unit, initial_cursor_x, initial_cursor_y)
                 else
-                    move_unit(SELECTED_UNIT, initial_cursor_x, initial_cursor_y)
+                    move_unit(fsm.selected_unit, initial_cursor_x, initial_cursor_y)
                 end
                 fsm:change_state("combat", {
-                    attacker = SELECTED_UNIT,
+                    attacker = fsm.selected_unit,
                     defender = enemy,
                     is_counter = false
                 })
@@ -282,13 +284,13 @@ fsm.states.attack_menu = setmetatable({
     end,
     draw = function()
         draw_units(PLAYER_UNITS, function (unit)
-            return unit ~= SELECTED_UNIT
+            return unit ~= fsm.selected_unit
         end, false)
         draw_units(ENEMY_UNITS, function (unit)
             return attackable_units[unit.x..","..unit.y] == nil
         end, false)
         draw_units(attackable_units, nil, true)
-        draw_unit_at(SELECTED_UNIT, initial_cursor_x, initial_cursor_y)
+        draw_unit_at(fsm.selected_unit, initial_cursor_x, initial_cursor_y)
         draw_cursor(true)
     end,
     exit = function() end

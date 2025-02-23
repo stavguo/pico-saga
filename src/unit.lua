@@ -130,6 +130,7 @@ function init_enemy_units()
         { x_start = 16, x_end = 31, y_start = 16, y_end = 31 }  -- Q4: explicitly 16,16 to 31,31
     }
 
+    local class_index = 1
     -- Find largest square in each quadrant
     for quad in all(quadrants) do
         local traversable_tiles = {}
@@ -145,7 +146,8 @@ function init_enemy_units()
         for i = 1, enemies_per_quad do
             local x = traversable_tiles[i].x
             local y = traversable_tiles[i].y
-            ENEMY_UNITS[x..","..y] = create_unit(x, y, enemy_classes[i], "enemy", false)
+            ENEMY_UNITS[x..","..y] = create_unit(x, y, enemy_classes[class_index], "enemy", false)
+            class_index = class_index + 1
         end
     end
 end

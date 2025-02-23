@@ -27,8 +27,6 @@ PLAYER_CASTLE_UNITS = {}
 ENEMY_UNITS = {}
 
 CURSOR = nil
-SELECTED_UNIT = nil
-SELECTED_CASTLE = nil
 TRAVERSABLE_TILES = {}
 
 UI_STACK = {}
@@ -69,12 +67,6 @@ local TERRAIN_EFFECTS = {
     [7] = 20, -- Mountain: -20% hit rate (unlikely to attack from here)
     [8] = 0,   -- Player Castle: no effect
     [9] = 0    -- Enemy Castle: no effect
-}
-
-COMBAT = {
-    attacker = nil,  -- The unit initiating the attack
-    defender = nil,  -- The unit being attacked
-    is_counter = false,  -- Whether this is a counterattack
 }
 
 ENEMY_INDEX = nil
