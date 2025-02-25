@@ -126,8 +126,8 @@ function find_castle_spots()
 end
 
 function init_castles()
+    local cursor
     local spots = find_castle_spots()
-    local player_castle
     for i, spot in ipairs(spots) do
         -- Get biased offset based on quadrant
         local offset_x, offset_y = get_castle_offset(spot.quadrant, spot.size)
@@ -138,13 +138,13 @@ function init_castles()
 
         -- Initialize cursor for the player's castle
         if i == 1 then
-            player_castle = {
+            cursor = {
                 x = x,
                 y = y
             }
         end
     end
-    return player_castle
+    return cursor
 end
 
 -- Draw the interior of a castle

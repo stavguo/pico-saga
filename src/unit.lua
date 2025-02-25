@@ -17,27 +17,47 @@ function create_unit(x, y, class, team, in_castle)
     }
 end
 
-function get_unit_at(cursor, in_castle)
-    if in_castle then
-        return PLAYER_CASTLE_UNITS[cursor.x..","..cursor.y]
+function get_unit_at(cursor, units, in_castle)
+    local unit = units[cursor.x..","..cursor.y]
+    if unit then
+        if in_castle == nil and not unit.in_castle then
+            return unit
+        else
+            if unit.in_castle == in_castle then
+                return unit
+            end
+        end
     end
-    return PLAYER_UNITS[cursor.x..","..cursor.y] or ENEMY_UNITS[cursor.x..","..cursor.y]
+    return nil
 end
 
-function move_unit(unit, cursor)
-    local from_key = unit.x..","..unit.y
-    local to_key = cursor.x..","..cursor.y
-    if unit.team == "player" then
-        PLAYER_UNITS[to_key], PLAYER_UNITS[from_key] = unit
-    elseif unit.team == "enemy" then
-        ENEMY_UNITS[to_key], ENEMY_UNITS[from_key] = unit
-    end
+function move_unit(unit, units, cursor)
+    -- Remove old position from units
+    local old_key = unit.x..","..unit.y
+    units[old_key] = nil
+    
+    -- Update position
     unit.x, unit.y = cursor.x, cursor.y
+    
+    -- Add new position
+    local new_key = unit.x..","..unit.y
+    units[new_key] = unit
 end
 
-function deploy_unit(unit, cursor)
-    PLAYER_UNITS[cursor.x..","..cursor.y], PLAYER_CASTLE_UNITS[unit.x..","..unit.y] = unit
-    unit.x, unit.y, unit.in_castle = cursor.x, cursor.y, false
+function deploy_unit(unit, units, cursor)
+    -- Remove old position from units
+    local old_key = unit.x..","..unit.y
+    if units[old_key] then
+        units[old_key] = nil
+    end
+    
+    -- Update unit state
+    unit.x, unit.y = cursor.x, cursor.y
+    unit.in_castle = false
+    
+    -- Add to new position
+    local new_key = unit.x..","..unit.y
+    units[new_key] = unit
 end
 
 function get_neighbors(x, y, max_width, max_height)
@@ -58,7 +78,7 @@ function get_neighbors(x, y, max_width, max_height)
     return neighbors
 end
 
-function find_traversable_tiles(cursor, movement, unit_team)
+function find_traversable_tiles(cursor, units, movement, unit_team)
     traversable_tiles = {} -- Clear previous tiles
     traversable_tiles[cursor.x..","..cursor.y] = true
 
@@ -76,7 +96,7 @@ function find_traversable_tiles(cursor, movement, unit_team)
                 local new_cost = costs[current.x..","..current.y] + cost
                 if new_cost <= movement and (not costs[key] or new_cost < costs[key]) then
                     -- Check if the tile is occupied by an opposing unit
-                    local unit_at_tile = get_unit_at(n)
+                    local unit_at_tile = get_unit_at(n, units)
                     if not unit_at_tile or unit_at_tile.team == unit_team then
                         costs[key] = new_cost
                         add(frontier, n)
@@ -89,7 +109,7 @@ function find_traversable_tiles(cursor, movement, unit_team)
     return traversable_tiles
 end
 
-function init_player_units()
+function init_player_units(units)
     local player_classes = {
         "Sword", "Sword", "Sword",
         "Lance", "Lance", "Lance",
@@ -99,7 +119,7 @@ function init_player_units()
     -- Place leader
     local throne = rnd(1) < 0.5 and 7 or 8
     
-    PLAYER_CASTLE_UNITS[throne..","..1] = create_unit(throne, 1, player_classes[leader_idx], "player", true)
+    units[throne..","..1] = create_unit(throne, 1, player_classes[leader_idx], "player", true)
 
     -- Place 8 units in formation
     count = 0
@@ -110,13 +130,13 @@ function init_player_units()
             local is_right = pos >= 2
             local x = is_right and (11 + (pos - 2) * 2) or (2 + pos * 2)
             local y = 2 + row * 2
-            PLAYER_CASTLE_UNITS[x..","..y] = create_unit(x, y, player_classes[i], "player", true)
+            units[x..","..y] = create_unit(x, y, player_classes[i], "player", true)
             count = count + 1
         end
     end
 end
 
-function init_enemy_units()
+function init_enemy_units(units)
     local enemy_classes = {
         "Sword", "Sword", "Sword", "Sword",
         "Lance", "Lance", "Lance", "Lance",
@@ -147,19 +167,19 @@ function init_enemy_units()
         for i = 1, enemies_per_quad do
             local x = traversable_tiles[i].x
             local y = traversable_tiles[i].y
-            ENEMY_UNITS[x..","..y] = create_unit(x, y, enemy_classes[class_index], "enemy", false)
+            units[x..","..y] = create_unit(x, y, enemy_classes[class_index], "enemy", false)
             class_index = class_index + 1
         end
     end
 end
 
 -- Convert bfs output (list of {x, y} coordinates) to a list of units
-function get_attackable_units(bfs_output)
+function get_attackable_units(bfs_output, units, team)
     local attackable_units = {}
     for _, pos in ipairs(bfs_output) do
         local key = pos[1] .. "," .. pos[2]  -- Convert {x, y} to "x,y"
-        local unit = ENEMY_UNITS[key]        -- Look up the unit in ENEMY_UNITS
-        if unit then
+        local unit = units[key]        -- Look up the unit in ENEMY_UNITS
+        if unit and unit.team == team then
             attackable_units[key] = unit      -- Add the unit to the list
         end
     end
@@ -167,7 +187,7 @@ function get_attackable_units(bfs_output)
 end
 
 -- BFS function
-function bfs(cursor, max_distance, filter_func)
+function bfs(cursor, units, max_distance, filter_func)
     local visited = {}  -- Track visited positions
     local queue = {}    -- Queue for BFS
     local results = {}  -- Positions that match the filter
@@ -190,7 +210,7 @@ function bfs(cursor, max_distance, filter_func)
         local x, y, distance = current.x, current.y, current.distance
 
         -- Check if the current position matches the filter
-        if filter_func(x, y) then
+        if filter_func(x, y, units) then
             add(results, {x, y})  -- Add to results
         end
 
@@ -211,8 +231,9 @@ function bfs(cursor, max_distance, filter_func)
     return results
 end
 
-function find_enemy(x, y)
-    return ENEMY_UNITS[x..","..y]
+function find_enemy(x, y, units)
+    local key = x..","..y
+    return units[key] ~= nil and units[key].team == "enemy"
 end
 
 function hit_chance(attacker, defender)
@@ -275,11 +296,8 @@ function draw_unit_at(unit, x, y, flashing)
     end
 end
 
-function draw_nonselected_overworld_units(selected)
-    draw_units(ENEMY_UNITS, function (unit)
-        return unit ~= selected
-    end)
-    draw_units(PLAYER_UNITS, function (unit)
-        return unit ~= selected
+function draw_nonselected_overworld_units(selected, units)
+    draw_units(units, function (unit)
+        return unit ~= selected and not unit.in_castle
     end)
 end

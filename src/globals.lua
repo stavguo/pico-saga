@@ -30,6 +30,12 @@ LAYERS = {
     { 1 / 2,  1 / 8 }
 }
 
+TREE_LAYERS = {
+    --{ 1 / 8,  1 },
+    { 1 / 4,  1 },
+    { 1 / 2,  1 / 2 }
+}
+
 UNIT_STATS = {
     ["Lance"] = { Sprite = 14, HP = 30, Str = 20, Mag = 0, Skl = 5, Spd = 5, Def = 5, Mdf = 0, Mov = 6 },
     ["Axe"] = { Sprite = 15, HP = 30, Str = 20, Mag = 0, Skl = 5, Spd = 5, Def = 5, Mdf = 0, Mov = 6 },
@@ -48,17 +54,9 @@ WEAPON_TRIANGLE = {
     ["Monk"] = {"Archer", "Mage", "Thief"}
 }
 
-PLAYER_UNITS = {}
-PLAYER_CASTLE_UNITS = {}
-ENEMY_UNITS = {}
-UI_STACK = {}
-
 function SHUFFLE(items)
     for i = #items, 2, -1 do
         local j = flr(rnd(i)) + 1
         items[i], items[j] = items[j], items[i]
     end
 end
-
-ENEMY_INDEX = nil
-ENEMY_POSITIONS = {}
