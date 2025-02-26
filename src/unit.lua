@@ -13,7 +13,8 @@ function create_unit(x, y, class, team, in_castle)
         Spd = UNIT_STATS[class].Spd,
         Def = UNIT_STATS[class].Def,
         Mdf = UNIT_STATS[class].Mdf,
-        Mov = UNIT_STATS[class].Mov
+        Mov = UNIT_STATS[class].Mov,
+        Atr = UNIT_STATS[class].Atr
     }
 end
 

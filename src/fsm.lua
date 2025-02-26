@@ -176,7 +176,7 @@ fsm.states.move_unit = setmetatable({
     traversable_tiles,
     enter = function()
         -- Show traversable tiles
-        traversable_tiles = find_traversable_tiles(fsm.cursor, fsm.units, 5, fsm.selected_unit.team)
+        traversable_tiles = find_traversable_tiles(fsm.cursor, fsm.units, fsm.selected_unit.Mov, fsm.selected_unit.team)
     end,
     update = function()
         -- Store the current cursor position
@@ -221,7 +221,7 @@ fsm.states.move_unit = setmetatable({
 fsm.states.action_menu = setmetatable({
     enemy_positions,
     enter = function()
-        enemy_positions = bfs(fsm.cursor, fsm.units, 2, find_enemy)
+        enemy_positions = bfs(fsm.cursor, fsm.units, fsm.selected_unit.Atr, find_enemy)
         if next(enemy_positions) ~= nil then
             create_ui({
                 "Attack",
