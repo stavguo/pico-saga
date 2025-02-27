@@ -32,8 +32,8 @@ function get_ui_selection(ui)
 end
 
 function draw_ui(cursor, ui_stack)
-    local cx = cursor.x - (peek2(0x5f28) \ 8)
-    local cy = cursor.y - (peek2(0x5f2a) \ 8)
+    local cx = cursor[1] - (peek2(0x5f28) \ 8)
+    local cy = cursor[2] - (peek2(0x5f2a) \ 8)
     local left = cx < 8
     local top = cy < 8
 

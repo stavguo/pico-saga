@@ -19,7 +19,7 @@ function create_unit(x, y, class, team, in_castle)
 end
 
 function get_unit_at(cursor, units, in_castle)
-    local unit = units[cursor.x..","..cursor.y]
+    local unit = units[vectoindex(cursor)]
     if unit then
         if in_castle == nil and not unit.in_castle then
             return unit
@@ -34,30 +34,30 @@ end
 
 function move_unit(unit, units, cursor)
     -- Remove old position from units
-    local old_key = unit.x..","..unit.y
+    local old_key = vectoindex({unit.x, unit.y})
     units[old_key] = nil
     
     -- Update position
-    unit.x, unit.y = cursor.x, cursor.y
+    unit.x, unit.y = cursor[1], cursor[2]
     
     -- Add new position
-    local new_key = unit.x..","..unit.y
+    local new_key = vectoindex({unit.x, unit.y})
     units[new_key] = unit
 end
 
 function deploy_unit(unit, units, cursor)
     -- Remove old position from units
-    local old_key = unit.x..","..unit.y
+    local old_key = vectoindex({unit.x, unit.y})
     if units[old_key] then
         units[old_key] = nil
     end
     
     -- Update unit state
-    unit.x, unit.y = cursor.x, cursor.y
+    unit.x, unit.y = cursor[1], cursor[2]
     unit.in_castle = false
     
     -- Add to new position
-    local new_key = unit.x..","..unit.y
+    local new_key = vectoindex({unit.x, unit.y})
     units[new_key] = unit
 end
 
@@ -72,7 +72,7 @@ function get_neighbors(x, y, max_width, max_height)
         local nx = x + dir.x
         local ny = y + dir.y
         if nx >= 0 and nx < max_width and ny >= 0 and ny < max_height then
-            add(neighbors, {x = nx, y = ny})
+            add(neighbors, {nx, ny})
         end
     end
 
@@ -81,20 +81,20 @@ end
 
 function find_traversable_tiles(cursor, units, movement, unit_team)
     traversable_tiles = {} -- Clear previous tiles
-    traversable_tiles[cursor.x..","..cursor.y] = true
+    traversable_tiles[vectoindex(cursor)] = true
 
-    local frontier = {{x = cursor.x, y = cursor.y}}
+    local frontier = {{cursor[1], cursor[2]}}
     local costs = {}
-    costs[cursor.x..","..cursor.y] = 0
+    costs[vectoindex(cursor)] = 0
 
     while #frontier > 0 do
         local current = deli(frontier, 1)
-        local neighbors = get_neighbors(current.x, current.y, 32, 32)
+        local neighbors = get_neighbors(current[1], current[2], 32, 32)
         for _, n in pairs(neighbors) do
-            local key = n.x..","..n.y
-            local cost = TERRAIN_COSTS[mget(n.x, n.y)]
+            local key = vectoindex(n)
+            local cost = TERRAIN_COSTS[mget(n[1], n[2])]
             if cost then
-                local new_cost = costs[current.x..","..current.y] + cost
+                local new_cost = costs[vectoindex(current)] + cost
                 if new_cost <= movement and (not costs[key] or new_cost < costs[key]) then
                     -- Check if the tile is occupied by an opposing unit
                     local unit_at_tile = get_unit_at(n, units)
@@ -120,7 +120,7 @@ function init_player_units(units)
     -- Place leader
     local throne = rnd(1) < 0.5 and 7 or 8
     
-    units[throne..","..1] = create_unit(throne, 1, player_classes[leader_idx], "player", true)
+    units[vectoindex({throne,1})] = create_unit(throne, 1, player_classes[leader_idx], "player", true)
 
     -- Place 8 units in formation
     count = 0
@@ -131,7 +131,7 @@ function init_player_units(units)
             local is_right = pos >= 2
             local x = is_right and (11 + (pos - 2) * 2) or (2 + pos * 2)
             local y = 2 + row * 2
-            units[x..","..y] = create_unit(x, y, player_classes[i], "player", true)
+            units[vectoindex({x,y})] = create_unit(x, y, player_classes[i], "player", true)
             count = count + 1
         end
     end
@@ -168,7 +168,7 @@ function init_enemy_units(units)
         for i = 1, enemies_per_quad do
             local x = traversable_tiles[i].x
             local y = traversable_tiles[i].y
-            units[x..","..y] = create_unit(x, y, enemy_classes[class_index], "enemy", false)
+            units[vectoindex({x,y})] = create_unit(x, y, enemy_classes[class_index], "enemy", false)
             class_index = class_index + 1
         end
     end
@@ -178,7 +178,7 @@ end
 function get_attackable_units(bfs_output, units, team)
     local attackable_units = {}
     for _, pos in ipairs(bfs_output) do
-        local key = pos[1] .. "," .. pos[2]  -- Convert {x, y} to "x,y"
+        local key = vectoindex(pos)  -- Convert {x, y} to "x,y"
         local unit = units[key]        -- Look up the unit in ENEMY_UNITS
         if unit and unit.team == team then
             attackable_units[key] = unit      -- Add the unit to the list
@@ -194,8 +194,8 @@ function bfs(cursor, units, max_distance, filter_func)
     local results = {}  -- Positions that match the filter
 
     -- Add the starting position to the queue
-    add(queue, {x = cursor.x, y = cursor.y, distance = 0})
-    visited[cursor.x..","..cursor.y] = true
+    add(queue, {x = cursor[1], y = cursor[2], distance = 0})
+    visited[vectoindex(cursor)] = true
 
     -- Directions for Manhattan distance (4-way movement)
     local directions = {
@@ -221,8 +221,8 @@ function bfs(cursor, units, max_distance, filter_func)
                 local nx, ny = x + dir.x, y + dir.y
 
                 -- Check if the neighbor is within bounds and not visited
-                if nx >= 0 and nx < 32 and ny >= 0 and ny < 32 and not visited[nx..","..ny] then
-                    visited[nx..","..ny] = true  -- Mark as visited
+                if nx >= 0 and nx < 32 and ny >= 0 and ny < 32 and not visited[vectoindex({nx,ny})] then
+                    visited[vectoindex({nx,ny})] = true  -- Mark as visited
                     add(queue, {x = nx, y = ny, distance = distance + 1})  -- Enqueue
                 end
             end
@@ -233,7 +233,7 @@ function bfs(cursor, units, max_distance, filter_func)
 end
 
 function find_enemy(x, y, units)
-    local key = x..","..y
+    local key = vectoindex({x,y})
     return units[key] ~= nil and units[key].team == "enemy"
 end
 

@@ -74,20 +74,17 @@ fsm.states.overworld = setmetatable({
 
         -- Select castle or unit
         if btnp(4) then -- "Select" button
-            local castle = mget(fsm.cursor.x, fsm.cursor.y)
+            local castle = mget(fsm.cursor[1], fsm.cursor[2])
             local unit = get_unit_at(fsm.cursor, fsm.units, false)
             if castle == 8 then
-                fsm.selected_castle = {
-                    x = fsm.cursor.x,
-                    y = fsm.cursor.y
-                }
+                fsm.selected_castle = {fsm.cursor[1], fsm.cursor[2]}
                 fsm:change_state("castle")
             elseif unit then
-                fsm.selected_unit = unit
-                fsm:change_state("unit_info")
+                    fsm.selected_unit = unit
+                    fsm:change_state("unit_info")
+                end
             end
-        end
-    end,
+            end,
     draw = function()
         draw_units(fsm.units, function (unit)
             return not unit.in_castle
@@ -180,16 +177,16 @@ fsm.states.move_unit = setmetatable({
     end,
     update = function()
         -- Store the current cursor position
-        local old_x, old_y = fsm.cursor.x, fsm.cursor.y
+        local old_x, old_y = fsm.cursor[1], fsm.cursor[2]
     
         -- Move cursor based on input
         update_cursor(fsm.cursor, 31, 31)
     
         -- Check if the new cursor position is in traversable_tiles
-        local key = fsm.cursor.x..","..fsm.cursor.y
+        local key = vectoindex(fsm.cursor)
         if not traversable_tiles[key] then
             -- If not, revert to the old position
-            fsm.cursor.x, fsm.cursor.y = old_x, old_y
+            fsm.cursor[1], fsm.cursor[2] = old_x, old_y
         end
     
         -- Update camera
@@ -208,7 +205,7 @@ fsm.states.move_unit = setmetatable({
     draw = function()
         draw_nonselected_overworld_units(fsm.selected_unit, fsm.units)
         if fsm.selected_castle then
-            draw_unit_at(fsm.selected_unit, fsm.selected_castle.x, fsm.selected_castle.y, true)
+            draw_unit_at(fsm.selected_unit, fsm.selected_castle[1], fsm.selected_castle[2], true)
         else
             draw_unit_at(fsm.selected_unit, nil, nil, true)
         end
@@ -252,7 +249,7 @@ fsm.states.action_menu = setmetatable({
         end
         if btnp(5) then
             if fsm.selected_castle then
-                fsm.cursor.x, fsm.cursor.y = fsm.selected_castle.x, fsm.selected_castle.y
+                fsm.cursor[1], fsm.cursor[2] = fsm.selected_castle[1], fsm.selected_castle[2]
                 update_camera(fsm.cursor)
             end
             fsm:change_state("move_unit", {})
@@ -260,7 +257,7 @@ fsm.states.action_menu = setmetatable({
     end,
     draw = function()
         draw_nonselected_overworld_units(fsm.selected_unit, fsm.units)
-        draw_unit_at(fsm.selected_unit, fsm.cursor.x, fsm.cursor.y, true)
+        draw_unit_at(fsm.selected_unit, fsm.cursor[1], fsm.cursor[2], true)
         draw_ui(fsm.cursor, fsm.ui)
     end,
     exit = function()
@@ -272,7 +269,7 @@ fsm.states.attack_menu = setmetatable({
     initial_cursor, attackable_units,
     enter = function(props)
         -- Store the initial cursor position
-        initial_cursor = { x = fsm.cursor.x, y = fsm.cursor.y}
+        initial_cursor = {fsm.cursor[1], fsm.cursor[2]}
 
         -- Find all attackable enemies within range using bfs output
         attackable_units = get_attackable_units(props.enemy_positions, fsm.units, "enemy")
@@ -284,7 +281,7 @@ fsm.states.attack_menu = setmetatable({
 
         -- Handle the select button press
         if btnp(4) then  -- Select button
-            local key = fsm.cursor.x .. "," .. fsm.cursor.y  -- Convert cursor position to "x,y"
+            local key = vectoindex(fsm.cursor) -- Convert cursor position to "x,y"
             local enemy = attackable_units[key] -- Check if the cursor is on an attackable enemy
 
             if enemy then
@@ -311,12 +308,12 @@ fsm.states.attack_menu = setmetatable({
     end,
     draw = function()
         draw_units(fsm.units, function (unit)
-            return unit ~= fsm.selected_unit and not unit.in_castle and attackable_units[unit.x..","..unit.y] == nil
+            return unit ~= fsm.selected_unit and not unit.in_castle and attackable_units[vectoindex({unit.x, unit.y})] == nil
         end, false)
         draw_units(fsm.units, function (unit)
-            return unit ~= fsm.selected_unit and not unit.in_castle and attackable_units[unit.x..","..unit.y] != nil
+            return unit ~= fsm.selected_unit and not unit.in_castle and attackable_units[vectoindex({unit.x, unit.y})] != nil
         end, true)
-        draw_unit_at(fsm.selected_unit, initial_cursor.x, initial_cursor.y)
+        draw_unit_at(fsm.selected_unit, initial_cursor[1], initial_cursor[2])
         draw_cursor(fsm.cursor, true)
     end,
     exit = function() end
@@ -367,4 +364,22 @@ fsm.states.combat = setmetatable({
     exit = function()
         fsm.ui = {}
     end
+}, { __index = base_state })
+
+fsm.states.enemy_turn = setmetatable({
+    enter = function(payload)
+        local enemy = payload.enemy
+        local target_coords = find_weakest_unit_in_range(enemy, fsm.units)
+        if target_coords then
+            local path = a_star(enemy.x, enemy.y, target_coords, fsm.units, enemy.Mov)
+            if path and #path > 0 then
+                local target = path[1]
+                move_unit(enemy, fsm.units, target)
+            end
+        end
+        fsm:change_state("overworld")
+    end,
+    update = function() end,
+    draw = function() end,
+    exit = function() end
 }, { __index = base_state })

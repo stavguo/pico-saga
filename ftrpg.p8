@@ -8,6 +8,7 @@ __lua__
 #include src/unit.lua
 #include src/camera.lua
 #include src/ui.lua
+#include src/pathfinding.lua
 #include src/fsm.lua
 #include src/main.lua
 __gfx__

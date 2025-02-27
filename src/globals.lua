@@ -60,3 +60,61 @@ function SHUFFLE(items)
         items[i], items[j] = items[j], items[i]
     end
 end
+
+-- insert into start of table
+function insert(t, val)
+    for i=(#t+1),2,-1 do
+        t[i] = t[i-1]
+    end
+    t[1] = val
+end
+
+-- insert into table and sort by priority
+function insert(t, val, p)
+    if #t >= 1 then
+        add(t, {})
+        for i=(#t),2,-1 do
+            local next = t[i-1]
+            if p < next[2] then
+                t[i] = {val, p}
+                return
+            else
+                t[i] = next
+            end
+        end
+        t[1] = {val, p}
+    else
+        add(t, {val, p}) 
+    end
+end
+
+-- pop the last element off a table
+function popEnd(t)
+    local top = t[#t]
+    del(t,t[#t])
+    return top[1]
+end
+
+function reverse(t)
+    for i=1,(#t/2) do
+        local temp = t[i]
+        local oppindex = #t-(i-1)
+        t[i] = t[oppindex]
+        t[oppindex] = temp
+    end
+end
+
+-- translate a 2d x,y coordinate to a 1d index and back again
+function vectoindex(vec)
+    return maptoindex(vec[1],vec[2])
+end
+
+function maptoindex(x, y)
+    return ((x+1) * 32) + y
+end
+
+function indextomap(index)
+    local x = (index-1)/32
+    local y = index - (x * 32)
+    return {x,y}
+end 

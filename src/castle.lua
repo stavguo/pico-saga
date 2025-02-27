@@ -138,10 +138,7 @@ function init_castles()
 
         -- Initialize cursor for the player's castle
         if i == 1 then
-            cursor = {
-                x = x,
-                y = y
-            }
+            cursor = { x, y }
         end
     end
     return cursor
