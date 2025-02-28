@@ -125,7 +125,7 @@ function find_castle_spots()
     return best_spots
 end
 
-function init_castles()
+function init_castles(castles)
     local cursor
     local spots = find_castle_spots()
     for i, spot in ipairs(spots) do
@@ -139,6 +139,9 @@ function init_castles()
         -- Initialize cursor for the player's castle
         if i == 1 then
             cursor = { x, y }
+            add(castles, {x = x, y = y, team = "player"})
+        else
+            add(castles, {x = x, y = y, team = "enemy"})
         end
     end
     return cursor

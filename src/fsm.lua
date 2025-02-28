@@ -9,6 +9,7 @@ fsm = {
     current_state = "overworld",
     selected_unit = nil,
     selected_castle = nil,
+    castles = {},
     cursor = nil,
     units = {},
     ui = {},
@@ -52,7 +53,7 @@ fsm.states.setup = setmetatable({
         local tree_fn = os2d_noisefn(treeseed)
 
         init_terrain(noise_fn, tree_fn)
-        fsm.cursor = init_castles()
+        fsm.cursor = init_castles(fsm.castles)
         init_player_units(fsm.units)
         init_enemy_units(fsm.units)
 
@@ -141,8 +142,12 @@ fsm.states.unit_info = setmetatable({
     end,
     update = function()
         if btnp(0) or btnp(1) or btnp(2) or btnp(3) then
-            if (fsm.selected_castle) exit_castle(fsm.cursor, fsm.selected_castle)
-            fsm:change_state("move_unit")
+            if (fsm.selected_unit.team == "enemy") then
+                fsm:change_state("enemy_turn", {enemy = fsm.selected_unit})
+            else
+                if (fsm.selected_castle) exit_castle(fsm.cursor, fsm.selected_castle)
+                fsm:change_state("move_unit")
+            end
         elseif btnp(5) then -- "Back" button
             if fsm.selected_castle then
                 fsm:change_state("castle")
@@ -218,7 +223,14 @@ fsm.states.move_unit = setmetatable({
 fsm.states.action_menu = setmetatable({
     enemy_positions,
     enter = function()
-        enemy_positions = bfs(fsm.cursor, fsm.units, fsm.selected_unit.Atr, find_enemy)
+        enemy_positions = {}
+        local tiles = get_tiles_within_distance(fsm.cursor, fsm.selected_unit.Atr)
+        for _, tile in ipairs(tiles) do
+            local unit = get_unit_at(tile, fsm.units, false)
+            if unit and unit.team == "enemy" then
+                add(enemy_positions, tile)
+            end
+        end
         if next(enemy_positions) ~= nil then
             create_ui({
                 "Attack",
@@ -367,15 +379,27 @@ fsm.states.combat = setmetatable({
 }, { __index = base_state })
 
 fsm.states.enemy_turn = setmetatable({
+    enemy,
     enter = function(payload)
-        local enemy = payload.enemy
-        local target_coords = find_weakest_unit_in_range(enemy, fsm.units)
-        if target_coords then
-            local path = a_star(enemy.x, enemy.y, target_coords, fsm.units, enemy.Mov)
-            if path and #path > 0 then
-                local target = path[1]
-                move_unit(enemy, fsm.units, target)
+        enemy = payload.enemy
+        local target = find_target(enemy, fsm.units, fsm.castles)
+        local start = {enemy.x, enemy.y}
+        local target_coords = get_tiles_within_distance(target, enemy.Atr, function (pos)
+            local unit = get_unit_at(pos, fsm.units, false)
+            return (unit == nil or unit == enemy) and mget(pos[1], pos[2]) < 6
+        end)
+        local trimmed_path = a_star(start, target, target_coords, enemy.Mov, function (pos)
+            return get_unit_at(pos, fsm.units, false) == nil and mget(pos[1], pos[2]) < 6
+        end)
+
+        -- Use the trimmed path
+        if trimmed_path and #trimmed_path > 0 then
+            for _, point in ipairs(trimmed_path) do
+                printh("Move to: "..point[1]..","..point[2], "logs/debug.txt")
             end
+            move_unit(enemy, fsm.units, trimmed_path[#trimmed_path])
+        else
+            printh("No path found.", "logs/debug.txt")
         end
         fsm:change_state("overworld")
     end,

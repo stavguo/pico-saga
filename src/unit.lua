@@ -61,21 +61,23 @@ function deploy_unit(unit, units, cursor)
     units[new_key] = unit
 end
 
-function get_neighbors(x, y, max_width, max_height)
+function get_neighbors(pos, filter_func)
     local neighbors = {}
     local directions = {
-        {x = -1, y = 0}, {x = 1, y = 0},
-        {x = 0, y = -1}, {x = 0, y = 1}
+        {-1, 0}, {1, 0},
+        {0, -1}, {0, 1}
     }
-
-    for _, dir in pairs(directions) do
-        local nx = x + dir.x
-        local ny = y + dir.y
-        if nx >= 0 and nx < max_width and ny >= 0 and ny < max_height then
-            add(neighbors, {nx, ny})
+    for _, dir in ipairs(directions) do
+        local nx, ny = pos[1] + dir[1], pos[2] + dir[2]
+        if nx >= 0 and nx < 32 and ny >= 0 and ny < 32 then
+            if filter_func == nil or filter_func({nx, ny}) then
+                add(neighbors, {nx, ny})
+            end
         end
     end
-
+    if (pos[1] + pos[2]) % 2 == 0 then
+        reverse(neighbors)
+    end
     return neighbors
 end
 
@@ -89,7 +91,7 @@ function find_traversable_tiles(cursor, units, movement, unit_team)
 
     while #frontier > 0 do
         local current = deli(frontier, 1)
-        local neighbors = get_neighbors(current[1], current[2], 32, 32)
+        local neighbors = get_neighbors(current)
         for _, n in pairs(neighbors) do
             local key = vectoindex(n)
             local cost = TERRAIN_COSTS[mget(n[1], n[2])]
@@ -187,49 +189,24 @@ function get_attackable_units(bfs_output, units, team)
     return attackable_units
 end
 
--- BFS function
-function bfs(cursor, units, max_distance, filter_func)
-    local visited = {}  -- Track visited positions
-    local queue = {}    -- Queue for BFS
-    local results = {}  -- Positions that match the filter
-
-    -- Add the starting position to the queue
-    add(queue, {x = cursor[1], y = cursor[2], distance = 0})
-    visited[vectoindex(cursor)] = true
-
-    -- Directions for Manhattan distance (4-way movement)
-    local directions = {
-        {x = -1, y =  0},  -- Left
-        {x =  1, y =  0},  -- Right
-        {x =  0, y = -1},  -- Up
-        {x =  0, y =  1}   -- Down
-    }
-
-    -- Perform BFS
-    while #queue > 0 do
-        local current = deli(queue, 1)  -- Dequeue the first element
-        local x, y, distance = current.x, current.y, current.distance
-
-        -- Check if the current position matches the filter
-        if filter_func(x, y, units) then
-            add(results, {x, y})  -- Add to results
-        end
-
-        -- Explore neighbors if within max distance
-        if distance < max_distance then
-            for _, dir in ipairs(directions) do
-                local nx, ny = x + dir.x, y + dir.y
-
-                -- Check if the neighbor is within bounds and not visited
-                if nx >= 0 and nx < 32 and ny >= 0 and ny < 32 and not visited[vectoindex({nx,ny})] then
-                    visited[vectoindex({nx,ny})] = true  -- Mark as visited
-                    add(queue, {x = nx, y = ny, distance = distance + 1})  -- Enqueue
+function get_tiles_within_distance(start, max_distance, filter_func)
+    local result = {}
+    for x = start[1] - max_distance, start[1] + max_distance do
+        for y = start[2] - max_distance, start[2] + max_distance do
+            -- Check if the tile is within bounds (0,0 to 31,31)
+            if x >= 0 and x < 32 and y >= 0 and y < 32 then
+                -- Calculate Manhattan distance
+                local distance = abs(x - start[1]) + abs(y - start[2])
+                -- Add to result if within max_distance
+                if distance > 0 and distance <= max_distance then
+                    if filter_func == nil or filter_func({x, y}) then
+                        add(result, {x, y})
+                    end
                 end
             end
         end
     end
-
-    return results
+    return result
 end
 
 function find_enemy(x, y, units)
