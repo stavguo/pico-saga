@@ -44,10 +44,13 @@ function a_star(start, goal, target_coords, max_movement, filter_func)
     end
 
     if found_goal then
-        -- Reconstruct the path, including the goal
+        -- Reconstruct the path, excluding the start
         local path = {}
         local current = end_point
         while current do
+            if came_from[vectoindex(current)] == nil then
+                break
+            end
             add(path, current)
             current = came_from[vectoindex(current)]
         end
