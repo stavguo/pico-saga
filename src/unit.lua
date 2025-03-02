@@ -155,7 +155,7 @@ function init_enemy_units(units, castles, movement_distance)
             local filtered_tiles = {}
             for k, v in pairs(traversable_tiles) do
                 -- add(filtered_tiles, k)
-                local pos = indextomap(k)
+                local pos = indextovec(k)
                 local unit = get_unit_at(pos, units)
                 local terrain = mget(pos[1], pos[2])
                 if unit == nil and terrain == 1 then
@@ -174,7 +174,7 @@ function init_enemy_units(units, castles, movement_distance)
                 -- Get a random tile from the shuffled list
                 if #filtered_tiles > 0 then
                     local tileIdx = filtered_tiles[i]
-                    local pos = indextomap(tileIdx)
+                    local pos = indextovec(tileIdx)
 
                     -- Create the unit at the selected position
                     units[tileIdx] = create_unit(pos[1], pos[2], enemy_classes[class_index], "enemy", false)

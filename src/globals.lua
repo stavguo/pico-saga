@@ -106,15 +106,11 @@ end
 
 -- translate a 2d x,y coordinate to a 1d index and back again
 function vectoindex(vec)
-    return maptoindex(vec[1],vec[2])
+    return vec[2] * 32 + vec[1] + 1
 end
 
-function maptoindex(x, y)
-    return ((x+1) * 32) + y
-end
-
-function indextomap(index)
-    local x = (index - 1)\32
-    local y = index - (x * 32)
+function indextovec(index)
+    local i = index - 1
+    local x, y = i % 32, i \ 32
     return {x,y}
 end
