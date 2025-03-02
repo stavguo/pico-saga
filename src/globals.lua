@@ -114,7 +114,7 @@ function maptoindex(x, y)
 end
 
 function indextomap(index)
-    local x = (index-1)/32
+    local x = (index - 1)\32
     local y = index - (x * 32)
     return {x,y}
-end 
+end

@@ -55,7 +55,7 @@ fsm.states.setup = setmetatable({
         init_terrain(noise_fn, tree_fn)
         fsm.cursor = init_castles(fsm.castles)
         init_player_units(fsm.units)
-        init_enemy_units(fsm.units)
+        init_enemy_units(fsm.units, fsm.castles, 4)
 
         fsm:change_state("overworld")
     end
@@ -178,7 +178,11 @@ fsm.states.move_unit = setmetatable({
     traversable_tiles,
     enter = function()
         -- Show traversable tiles
-        traversable_tiles = find_traversable_tiles(fsm.cursor, fsm.units, fsm.selected_unit.Mov, fsm.selected_unit.team)
+        traversable_tiles = find_traversable_tiles(fsm.cursor, fsm.selected_unit.Mov, function (pos)
+            -- Check if the tile is occupied by an opposing unit
+            local unit = get_unit_at(pos, fsm.units)
+            return (unit == nil or unit == fsm.cursor.team) and mget(pos[1], pos[2]) < 6
+        end)
     end,
     update = function()
         -- Store the current cursor position

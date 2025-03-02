@@ -81,13 +81,13 @@ function get_neighbors(pos, filter_func)
     return neighbors
 end
 
-function find_traversable_tiles(cursor, units, movement, unit_team)
+function find_traversable_tiles(start, movement, filter_func)
     traversable_tiles = {} -- Clear previous tiles
-    traversable_tiles[vectoindex(cursor)] = true
+    traversable_tiles[vectoindex(start)] = 0
 
-    local frontier = {{cursor[1], cursor[2]}}
+    local frontier = {{start[1], start[2]}}
     local costs = {}
-    costs[vectoindex(cursor)] = 0
+    costs[vectoindex(start)] = 0
 
     while #frontier > 0 do
         local current = deli(frontier, 1)
@@ -98,12 +98,10 @@ function find_traversable_tiles(cursor, units, movement, unit_team)
             if cost then
                 local new_cost = costs[vectoindex(current)] + cost
                 if new_cost <= movement and (not costs[key] or new_cost < costs[key]) then
-                    -- Check if the tile is occupied by an opposing unit
-                    local unit_at_tile = get_unit_at(n, units)
-                    if not unit_at_tile or unit_at_tile.team == unit_team then
+                    if filter_func == nil or filter_func(n) then
                         costs[key] = new_cost
                         add(frontier, n)
-                        traversable_tiles[key] = true
+                        traversable_tiles[key] = new_cost
                     end
                 end
             end
@@ -139,39 +137,50 @@ function init_player_units(units)
     end
 end
 
-function init_enemy_units(units)
+function init_enemy_units(units, castles, movement_distance)
     local enemy_classes = {
         "Sword", "Sword", "Sword", "Sword",
         "Lance", "Lance", "Lance", "Lance",
         "Axe", "Axe", "Axe", "Axe"
     }
     SHUFFLE(enemy_classes)
-    local enemies_per_quad = 4
-    local quadrants = {
-        --{ x_start = 0, x_end = 15, y_start = 0, y_end = 15 },  -- Q1: explicitly 0,0 to 15,15
-        { x_start = 16, x_end = 31, y_start = 0, y_end = 15 },  -- Q2: explicitly 16,0 to 31,15
-        { x_start = 0, x_end = 15, y_start = 16, y_end = 31 },  -- Q3: explicitly 0,16 to 15,31
-        { x_start = 16, x_end = 31, y_start = 16, y_end = 31 }  -- Q4: explicitly 16,16 to 31,31
-    }
 
     local class_index = 1
-    -- Find largest square in each quadrant
-    for quad in all(quadrants) do
-        local traversable_tiles = {}
-        for y = quad.y_start, quad.y_end do
-            for x = quad.x_start, quad.x_end do
-                local terrain = mget(x, y)
-                if terrain == 1 then
-                    add(traversable_tiles, {x = x, y = y})
+    -- Loop through each castle
+    for _, castle in pairs(castles) do
+        if castle.team == "enemy" then  -- Only place units around enemy castles
+            -- Find traversable tiles around the castle within the specified movement distance
+            local start = {castle.x, castle.y}
+            local traversable_tiles = find_traversable_tiles(start, movement_distance)
+            local filtered_tiles = {}
+            for k, v in pairs(traversable_tiles) do
+                -- add(filtered_tiles, k)
+                local pos = indextomap(k)
+                local unit = get_unit_at(pos, units)
+                local terrain = mget(pos[1], pos[2])
+                if unit == nil and terrain == 1 then
+                    add(filtered_tiles, k)
                 end
             end
-        end
-        SHUFFLE(traversable_tiles)
-        for i = 1, enemies_per_quad do
-            local x = traversable_tiles[i].x
-            local y = traversable_tiles[i].y
-            units[vectoindex({x,y})] = create_unit(x, y, enemy_classes[class_index], "enemy", false)
-            class_index = class_index + 1
+
+            -- Shuffle the list of tiles
+            SHUFFLE(filtered_tiles)
+
+            -- Calculate the number of units to place around this castle
+            local num_units = flr(#enemy_classes / 3)
+            for i = 1, num_units do
+                if class_index > #enemy_classes then break end
+
+                -- Get a random tile from the shuffled list
+                if #filtered_tiles > 0 then
+                    local tileIdx = filtered_tiles[i]
+                    local pos = indextomap(tileIdx)
+
+                    -- Create the unit at the selected position
+                    units[tileIdx] = create_unit(pos[1], pos[2], enemy_classes[class_index], "enemy", false)
+                    class_index = class_index + 1
+                end
+            end
         end
     end
 end
