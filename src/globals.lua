@@ -54,6 +54,14 @@ WEAPON_TRIANGLE = {
     ["Monk"] = {"Archer", "Mage", "Thief"}
 }
 
+ENEMY_AI = {
+    CHARGE = "CHARGE",
+    RANGE = "RANGE",
+    GUARD = "GUARD",
+    RANGE_2 = "RANGE_2",
+    LINKED = "LINKED"
+}
+
 function SHUFFLE(items)
     for i = #items, 2, -1 do
         local j = flr(rnd(i)) + 1

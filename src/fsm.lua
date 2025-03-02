@@ -134,10 +134,8 @@ fsm.states.unit_info = setmetatable({
             fsm.selected_unit.team.." "..fsm.selected_unit.class
         }, fsm.ui, false)
         create_ui({
-            "HP: " .. fsm.selected_unit.HP .. " Spd: " .. fsm.selected_unit.Spd,
-            "Str: " .. fsm.selected_unit.Str .. " Def: " .. fsm.selected_unit.Def,
-            "Mag: " .. fsm.selected_unit.Mag .. " Mdf: " .. fsm.selected_unit.Mdf,
-            "Skl: " .. fsm.selected_unit.Skl .. " Mov: " .. fsm.selected_unit.Mov
+            "HP: " .. fsm.selected_unit.HP .. " Mov: " .. fsm.selected_unit.Mov,
+            (fsm.selected_unit.team == "enemy" and "AI: "..fsm.selected_unit.enemy_ai)
         }, fsm.ui, false)
     end,
     update = function()

@@ -1,4 +1,4 @@
-function create_unit(x, y, class, team, in_castle)
+function create_unit(x, y, class, team, in_castle, enemy_ai)
     return {
         x = x,
         y = y,
@@ -14,7 +14,8 @@ function create_unit(x, y, class, team, in_castle)
         Def = UNIT_STATS[class].Def,
         Mdf = UNIT_STATS[class].Mdf,
         Mov = UNIT_STATS[class].Mov,
-        Atr = UNIT_STATS[class].Atr
+        Atr = UNIT_STATS[class].Atr,
+        enemy_ai = enemy_ai
     }
 end
 
@@ -144,8 +145,15 @@ function init_enemy_units(units, castles, movement_distance)
         "Axe", "Axe", "Axe", "Axe"
     }
     SHUFFLE(enemy_classes)
+    local enemy_ai_options = {
+        ENEMY_AI.CHARGE, ENEMY_AI.CHARGE, ENEMY_AI.CHARGE,
+        ENEMY_AI.RANGE, ENEMY_AI.RANGE, ENEMY_AI.RANGE,
+        ENEMY_AI.RANGE_2, ENEMY_AI.RANGE_2, ENEMY_AI.RANGE_2,
+        ENEMY_AI.LINKED, ENEMY_AI.LINKED, ENEMY_AI.LINKED
+    }
+    SHUFFLE(enemy_ai_options)
 
-    local class_index = 1
+    local counter = 1
     -- Loop through each castle
     for _, castle in pairs(castles) do
         if castle.team == "enemy" then  -- Only place units around enemy castles
@@ -169,7 +177,7 @@ function init_enemy_units(units, castles, movement_distance)
             -- Calculate the number of units to place around this castle
             local num_units = flr(#enemy_classes / 3)
             for i = 1, num_units do
-                if class_index > #enemy_classes then break end
+                if counter > #enemy_classes then break end
 
                 -- Get a random tile from the shuffled list
                 if #filtered_tiles > 0 then
@@ -177,8 +185,8 @@ function init_enemy_units(units, castles, movement_distance)
                     local pos = indextovec(tileIdx)
 
                     -- Create the unit at the selected position
-                    units[tileIdx] = create_unit(pos[1], pos[2], enemy_classes[class_index], "enemy", false)
-                    class_index = class_index + 1
+                    units[tileIdx] = create_unit(pos[1], pos[2], enemy_classes[counter], "enemy", false, enemy_ai_options[counter])
+                    counter = counter + 1
                 end
             end
         end
