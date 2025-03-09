@@ -135,7 +135,7 @@ fsm.states.unit_info = setmetatable({
         }, fsm.ui, false)
         create_ui({
             "HP: " .. fsm.selected_unit.HP .. " Mov: " .. fsm.selected_unit.Mov,
-            (fsm.selected_unit.team == "enemy" and "AI: "..fsm.selected_unit.enemy_ai)
+            (fsm.selected_unit.team == "enemy" and "AI: "..fsm.selected_unit.enemy_ai or nil)
         }, fsm.ui, false)
     end,
     update = function()
@@ -342,8 +342,32 @@ fsm.states.combat = setmetatable({
         hit = will_hit(attacker, defender)
         damage = hit and calculate_damage(attacker, defender) or 0
         is_broken = not is_counter and is_attacker_advantage(attacker, defender)
-        message = hit and { attacker.team.." "..attacker.class..(is_broken and " broke " or " hit ").. defender.team.." "..defender.class, "for "..damage.." damage!" } or { attacker.team.." "..attacker.class.." attack missed..." }
-
+        if hit then
+            -- Reduce defender's HP, ensuring it doesn't go below 0
+            local remaining_hp = max(0, defender.HP - damage)
+        
+            -- Determine the action word based on whether the defender is defeated
+            local action_word
+            if remaining_hp <= 0 then
+                action_word = "defeated"
+            elseif is_broken then
+                action_word = "broke"
+            else
+                action_word = "hit"
+            end
+        
+            -- Construct the message based on the action word
+            message = {
+                attacker.team .. " " .. attacker.class .. " " .. action_word,
+                defender.team .. " " .. defender.class,
+                "for " .. damage .. " damage!"
+            }
+        else
+            -- Construct the message for a missed attack
+            message = {
+                attacker.team .. " " .. attacker.class .. " attack missed..."
+            }
+        end
         -- Display the result
         create_ui(message, fsm.ui, false)
     end,
@@ -352,6 +376,9 @@ fsm.states.combat = setmetatable({
             -- Apply the attack effects
             if hit then
                 defender.HP = max(0, defender.HP - damage)
+                if defender.HP <= 0 then
+                    fsm.units[vectoindex({defender.x,defender.y})] = nil
+                end
             end
             -- Check for counterattack
             if (not hit and not is_counter) or (not is_counter and defender.HP > 0 and not is_attacker_advantage(attacker, defender)) then
