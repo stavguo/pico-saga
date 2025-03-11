@@ -163,3 +163,19 @@ function draw_castle_interior()
         end
     end
 end
+
+function flip_castles(pos, castles)
+    adj_tiles = get_neighbors(pos)
+    for _, tile in ipairs(adj_tiles) do
+        for i, castle in ipairs(castles) do
+            if castle.x == tile[1] and castle.y == tile[2] then
+                if mget(castle.x, castle.y) == 8 then
+                    castle.team = "enemy"
+                elseif mget(castle.x, castle.y) == 9 then
+                    castle.team = "player"
+                end
+                mset(castle.x, castle.y, castle.team == "player" and 8 or 9)
+            end
+        end
+    end
+end

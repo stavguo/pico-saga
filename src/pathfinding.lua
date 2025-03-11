@@ -85,7 +85,7 @@ end
 
 function find_target(finder, units, castles)
     local weakest_hp = 32767
-    local weakest_unit = nil
+    local weakest_unit
     for _, unit in pairs(units) do
         if unit.team == "player" and not unit.in_castle then
             if unit.HP < weakest_hp then
@@ -96,7 +96,7 @@ function find_target(finder, units, castles)
     end
     if weakest_unit == nil then
         local closest_distance = 32767
-        local closest_castle = nil
+        local closest_castle
         for _, castle in pairs(castles) do
             if castle.team == "player" then
                 local dist = heuristic({finder.x, finder.y}, {castle.x, castle.y})

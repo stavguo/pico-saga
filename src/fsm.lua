@@ -233,15 +233,19 @@ fsm.states.action_menu = setmetatable({
                 add(enemy_positions, tile)
             end
         end
+        local adj_tiles = get_neighbors({fsm.cursor[1], fsm.cursor[2]}, function (pos)
+            return mget(pos[1], pos[2]) == 9
+        end)
+        local capturable = next(adj_tiles) ~= nil
         if next(enemy_positions) ~= nil then
             create_ui({
                 "Attack",
                 -- "Item",
-                "Standby"}, fsm.ui, true)
+                (capturable and "Capture" or "Standby")}, fsm.ui, true)
         else
             create_ui({
                 -- "Item",
-                "Standby"}, fsm.ui, true)
+                (capturable and "Capture" or "Standby")}, fsm.ui, true)
         end
     end,
     update = function()
@@ -252,11 +256,14 @@ fsm.states.action_menu = setmetatable({
                 fsm:change_state("attack_menu", {["enemy_positions"] = enemy_positions })
             -- elseif selected_item == "Item" then
             --     fsm:change_state("item")
-            elseif selected_item == "Standby" then
+            elseif selected_item == "Standby" or selected_item == "Capture" then
                 if (fsm.selected_unit.in_castle) then
                     deploy_unit(fsm.selected_unit, fsm.units, fsm.cursor)
                 else
                     move_unit(fsm.selected_unit, fsm.units, fsm.cursor)
+                end
+                if selected_item == "Capture" then
+                    flip_castles({fsm.cursor[1], fsm.cursor[2]}, fsm.castles)
                 end
                 fsm:change_state("overworld")
             end
@@ -412,23 +419,27 @@ fsm.states.enemy_turn = setmetatable({
     enter = function(payload)
         enemy = payload.enemy
         local target = find_target(enemy, fsm.units, fsm.castles)
-        local start = {enemy.x, enemy.y}
-        local target_coords = get_tiles_within_distance(target, enemy.Atr, function (pos)
-            local unit = get_unit_at(pos, fsm.units, false)
-            return (unit == nil or unit == enemy) and mget(pos[1], pos[2]) < 6
-        end)
-        local trimmed_path = a_star(start, target, target_coords, enemy.Mov, function (pos)
-            return get_unit_at(pos, fsm.units, false) == nil and mget(pos[1], pos[2]) < 6
-        end)
+        if target then
+            local start = {enemy.x, enemy.y}
+            local target_coords = get_tiles_within_distance(target, enemy.Atr, function (pos)
+                local unit = get_unit_at(pos, fsm.units, false)
+                return (unit == nil or unit == enemy) and mget(pos[1], pos[2]) < 6
+            end)
+            local trimmed_path = a_star(start, target, target_coords, enemy.Mov, function (pos)
+                return get_unit_at(pos, fsm.units, false) == nil and mget(pos[1], pos[2]) < 6
+            end)
 
-        -- Use the trimmed path
-        if trimmed_path and #trimmed_path > 0 then
-            for _, point in ipairs(trimmed_path) do
-                printh("Move to: "..point[1]..","..point[2], "logs/debug.txt")
+            -- Use the trimmed path
+            if trimmed_path and #trimmed_path > 0 then
+                for _, point in ipairs(trimmed_path) do
+                    printh("Move to: "..point[1]..","..point[2], "logs/debug.txt")
+                end
+                local dest = trimmed_path[#trimmed_path]
+                move_unit(enemy, fsm.units, dest)
+                flip_castles(dest, fsm.castles)
+            else
+                printh("No path found.", "logs/debug.txt")
             end
-            move_unit(enemy, fsm.units, trimmed_path[#trimmed_path])
-        else
-            printh("No path found.", "logs/debug.txt")
         end
         fsm:change_state("overworld")
     end,
