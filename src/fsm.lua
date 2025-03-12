@@ -257,11 +257,7 @@ fsm.states.action_menu = setmetatable({
             -- elseif selected_item == "Item" then
             --     fsm:change_state("item")
             elseif selected_item == "Standby" or selected_item == "Capture" then
-                if (fsm.selected_unit.in_castle) then
-                    deploy_unit(fsm.selected_unit, fsm.units, fsm.cursor)
-                else
-                    move_unit(fsm.selected_unit, fsm.units, fsm.cursor)
-                end
+                move_unit(fsm.selected_unit, fsm.units, fsm.cursor)
                 if selected_item == "Capture" then
                     flip_castles({fsm.cursor[1], fsm.cursor[2]}, fsm.castles)
                 end
@@ -306,12 +302,7 @@ fsm.states.attack_menu = setmetatable({
             local enemy = attackable_units[key] -- Check if the cursor is on an attackable enemy
 
             if enemy then
-                -- Set up combat
-                if fsm.selected_unit.in_castle then
-                    deploy_unit(fsm.selected_unit, fsm.units, initial_cursor)
-                else
-                    move_unit(fsm.selected_unit, fsm.units, initial_cursor)
-                end
+                move_unit(fsm.selected_unit, fsm.units, initial_cursor)
                 fsm:change_state("combat", {
                     attacker = fsm.selected_unit,
                     defender = enemy,
@@ -396,6 +387,11 @@ fsm.states.combat = setmetatable({
                     is_counter = true
                 })  -- Loop back to handle counterattack
             else
+                if (hit and is_broken) then
+                    attacker.exhausted = true
+                else
+                    defender.exhausted = true
+                end
                 is_counter, attacker, defender = false
                 fsm:change_state("overworld")
             end

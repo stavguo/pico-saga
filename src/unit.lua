@@ -15,7 +15,8 @@ function create_unit(x, y, class, team, in_castle, enemy_ai)
         Mdf = UNIT_STATS[class].Mdf,
         Mov = UNIT_STATS[class].Mov,
         Atr = UNIT_STATS[class].Atr,
-        enemy_ai = enemy_ai
+        enemy_ai = enemy_ai,
+        exhausted = false
     }
 end
 
@@ -36,28 +37,13 @@ end
 function move_unit(unit, units, cursor)
     -- Remove old position from units
     local old_key = vectoindex({unit.x, unit.y})
-    units[old_key] = nil
+    if (units[old_key]) units[old_key] = nil
     
     -- Update position
     unit.x, unit.y = cursor[1], cursor[2]
+    if (unit.in_castle) unit.in_castle = false
     
     -- Add new position
-    local new_key = vectoindex({unit.x, unit.y})
-    units[new_key] = unit
-end
-
-function deploy_unit(unit, units, cursor)
-    -- Remove old position from units
-    local old_key = vectoindex({unit.x, unit.y})
-    if units[old_key] then
-        units[old_key] = nil
-    end
-    
-    -- Update unit state
-    unit.x, unit.y = cursor[1], cursor[2]
-    unit.in_castle = false
-    
-    -- Add to new position
     local new_key = vectoindex({unit.x, unit.y})
     units[new_key] = unit
 end
@@ -275,19 +261,29 @@ function draw_unit_at(unit, x, y, flashing)
 
     -- Only draw if flashing is false or the flashing condition is met
     if not flashing or t() % 0.5 < 0.4 then
-        -- Apply palette changes for enemy units
-        if unit.team == "enemy" then
-            pal(12, 8, 0)  -- Change palette for enemy units
-            pal(1, 2, 0)
+        -- Apply palette changes
+        if unit.exhausted then
+            if unit.team == "enemy" then
+                pal(12, 2)  -- Change palette for exhausted enemy units
+                pal(1, 2)
+                pal(10, 2)
+            else
+                pal(12, 1)  -- Change palette for exhausted player units
+                pal(1, 1)
+                pal(10, 1)
+            end
+        else
+            if unit.team == "enemy" then
+                pal(12, 8)  -- Change palette for normal enemy units
+                pal(1, 2)
+            end
         end
 
         -- Draw the unit's sprite at the specified position
         spr(unit.sprite, x * 8, y * 8)
 
-        -- Reset palette if it was changed
-        if unit.team == "enemy" then
-            pal()
-        end
+        -- Reset the palette to default after drawing
+        pal()
     end
 end
 
