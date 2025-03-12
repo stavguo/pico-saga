@@ -122,3 +122,8 @@ function indextovec(index)
     local x, y = i % 32, i \ 32
     return {x,y}
 end
+
+-- manhattan distance on a square grid
+function heuristic(a, b)
+    return abs(a[1] - b[1]) + abs(a[2] - b[2])
+end

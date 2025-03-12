@@ -78,11 +78,6 @@ function a_star(start, goal, target_coords, max_movement, filter_func)
     end
 end
 
--- manhattan distance on a square grid
-function heuristic(a, b)
-    return abs(a[1] - b[1]) + abs(a[2] - b[2])
-end
-
 function find_target(finder, units, castles)
     local weakest_hp = 32767
     local weakest_unit
@@ -106,8 +101,8 @@ function find_target(finder, units, castles)
                 end
             end
         end
-        return closest_castle
+        return closest_castle, "castle"
     else
-        return weakest_unit
+        return weakest_unit, "unit"
     end
 end

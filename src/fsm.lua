@@ -418,14 +418,14 @@ fsm.states.enemy_turn = setmetatable({
     enemy,
     enter = function(payload)
         enemy = payload.enemy
-        local target = find_target(enemy, fsm.units, fsm.castles)
-        if target then
-            local start = {enemy.x, enemy.y}
-            local target_coords = get_tiles_within_distance(target, enemy.Atr, function (pos)
+        local enemy_pos = {enemy.x, enemy.y}
+        local target_pos, target_type = find_target(enemy, fsm.units, fsm.castles)
+        if target_pos then
+            local target_coords = get_tiles_within_distance(target_pos, enemy.Atr, function (pos)
                 local unit = get_unit_at(pos, fsm.units, false)
                 return (unit == nil or unit == enemy) and mget(pos[1], pos[2]) < 6
             end)
-            local trimmed_path = a_star(start, target, target_coords, enemy.Mov, function (pos)
+            local trimmed_path = a_star(enemy_pos, target_pos, target_coords, enemy.Mov, function (pos)
                 return get_unit_at(pos, fsm.units, false) == nil and mget(pos[1], pos[2]) < 6
             end)
 
@@ -435,13 +435,23 @@ fsm.states.enemy_turn = setmetatable({
                     printh("Move to: "..point[1]..","..point[2], "logs/debug.txt")
                 end
                 local dest = trimmed_path[#trimmed_path]
+                enemy_pos = dest
                 move_unit(enemy, fsm.units, dest)
                 flip_castles(dest, fsm.castles)
             else
                 printh("No path found.", "logs/debug.txt")
             end
         end
-        fsm:change_state("overworld")
+        if target_type == "unit" and heuristic(enemy_pos, target_pos) <= enemy.Atr then
+            printh("In combat conditional", "logs/debug.txt")
+            fsm:change_state("combat", {
+                attacker = fsm.units[vectoindex(enemy_pos)],
+                defender = fsm.units[vectoindex(target_pos)],
+                is_counter = false
+            })
+        else
+            fsm:change_state("overworld")
+        end
     end,
     update = function() end,
     draw = function() end,
