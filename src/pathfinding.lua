@@ -106,3 +106,70 @@ function find_target(finder, units, castles)
         return weakest_unit, "unit"
     end
 end
+
+function generate_full_path(start, goal)
+    local path, dx, dy = {}, goal[1] - start[1], goal[2] - start[2]
+    if abs(dx) > abs(dy) then
+        for x = start[1], goal[1], dx > 0 and 1 or -1 do
+            add(path, {x, start[2]})
+        end
+        for y = start[2], goal[2], dy > 0 and 1 or -1 do
+            add(path, {goal[1], y})
+        end
+    else
+        for y = start[2], goal[2], dy > 0 and 1 or -1 do
+            add(path, {start[1], y})
+        end
+        for x = start[1], goal[1], dx > 0 and 1 or -1 do
+            add(path, {x, goal[2]})
+        end
+    end
+    return path
+end
+
+function move_cursor_along_path(path, cursor, speed, on_arrival, on_delayed_action)
+    local current_step = 1
+    local last = time()
+    local at_end = false
+    local pause_start
+    local function move_to_end()
+        cursor[1], cursor[2] = path[#path][1], path[#path][2]
+        update_camera(cursor)
+        at_end = true
+        if on_arrival then
+            on_arrival()
+        end
+        pause_start = time()
+    end
+    local function skip_delay()
+        if on_delayed_action then
+            on_delayed_action()
+        end
+    end
+    return function()
+        if btnp(4) then
+            if not at_end then
+                move_to_end()
+            elseif pause_start then
+                skip_delay()
+            end
+        end
+        if not at_end and current_step <= #path then
+            local target = path[current_step]
+            local elapsed = time() - last
+            if elapsed >= (1 / speed) then
+                cursor[1], cursor[2] = target[1], target[2]
+                current_step = current_step + 1
+                last = time()
+                update_camera(cursor)
+            end
+            if current_step > #path then
+                move_to_end()
+            end
+        elseif at_end and pause_start then
+            if (time() - pause_start) > 1 then
+                skip_delay()
+            end
+        end
+    end
+end

@@ -127,3 +127,11 @@ end
 function heuristic(a, b)
     return abs(a[1] - b[1]) + abs(a[2] - b[2])
 end
+
+function hcenter(s)
+    -- screen center minus the
+    -- string length times the 
+    -- pixels in a char's width,
+    -- cut in half
+    return 64-#s*2
+  end

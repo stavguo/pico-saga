@@ -51,3 +51,11 @@ function draw_ui(cursor, ui_stack)
         end
     end
 end
+
+function draw_phase_text(current_phase)
+    local phase_text = current_phase == "enemy" and "Enemy Phase" or "Player Phase"
+    local x, y = peek2(0x5f28) + hcenter(phase_text), peek2(0x5f2a) + 61
+    rectfill(x-1, y-1, x + #phase_text*4, y+4, 0)
+    color(current_phase == "enemy" and 8 or 12)
+    print(phase_text, x, y)
+end

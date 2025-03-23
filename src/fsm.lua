@@ -7,6 +7,7 @@ local base_state = {
 
 fsm = {
     current_state = "overworld",
+    current_phase = "player",
     selected_unit = nil,
     selected_castle = nil,
     castles = {},
@@ -57,7 +58,7 @@ fsm.states.setup = setmetatable({
         init_player_units(fsm.units)
         init_enemy_units(fsm.units, fsm.castles, 4)
 
-        fsm:change_state("overworld")
+        fsm:change_state("phase_change")
     end
 }, { __index = base_state })
 
@@ -65,6 +66,16 @@ fsm.states.overworld = setmetatable({
     enter = function()
         if (fsm.selected_unit) fsm.selected_unit = nil
         if (fsm.selected_castle) fsm.selected_castle = nil
+        local actionable = false
+        for _, unit in pairs(fsm.units) do
+            if unit.team == "player" and not unit.exhausted then
+                actionable = true
+            end
+        end
+        if not actionable then
+            fsm.current_phase = "enemy"
+            fsm:change_state("phase_change")
+        end
     end,
     update = function()
         -- Move cursor
@@ -81,11 +92,11 @@ fsm.states.overworld = setmetatable({
                 fsm.selected_castle = {fsm.cursor[1], fsm.cursor[2]}
                 fsm:change_state("castle")
             elseif unit then
-                    fsm.selected_unit = unit
-                    fsm:change_state("unit_info")
-                end
+                fsm.selected_unit = unit
+                fsm:change_state("unit_info")
             end
-            end,
+        end
+    end,
     draw = function()
         draw_units(fsm.units, function (unit)
             return not unit.in_castle
@@ -139,9 +150,11 @@ fsm.states.unit_info = setmetatable({
         }, fsm.ui, false)
     end,
     update = function()
-        if btnp(0) or btnp(1) or btnp(2) or btnp(3) then
+        if (btnp(0) or btnp(1) or btnp(2) or btnp(3)) and not fsm.selected_unit.exhausted then
             if (fsm.selected_unit.team == "enemy") then
-                fsm:change_state("enemy_turn", {enemy = fsm.selected_unit})
+                fsm.current_phase = "enemy"
+                -- fsm:change_state("enemy_phase")
+                fsm:change_state("phase_change")
             else
                 if (fsm.selected_castle) exit_castle(fsm.cursor, fsm.selected_castle)
                 fsm:change_state("move_unit")
@@ -258,6 +271,7 @@ fsm.states.action_menu = setmetatable({
             --     fsm:change_state("item")
             elseif selected_item == "Standby" or selected_item == "Capture" then
                 move_unit(fsm.selected_unit, fsm.units, fsm.cursor)
+                fsm.selected_unit.exhausted = true
                 if selected_item == "Capture" then
                     flip_castles({fsm.cursor[1], fsm.cursor[2]}, fsm.castles)
                 end
@@ -393,7 +407,7 @@ fsm.states.combat = setmetatable({
                     defender.exhausted = true
                 end
                 is_counter, attacker, defender = false
-                fsm:change_state("overworld")
+                fsm:change_state(fsm.current_phase == "enemy" and "enemy_phase" or "overworld")
             end
         end
     end,
@@ -412,11 +426,21 @@ fsm.states.combat = setmetatable({
 
 fsm.states.enemy_turn = setmetatable({
     enemy,
+    mv_cursor_func,
     enter = function(payload)
+        local function end_enemy_turn(enemy)
+            enemy.exhausted = true
+            fsm:change_state(fsm.current_phase == "enemy" and "enemy_phase" or "overworld")
+        end
         enemy = payload.enemy
         local enemy_pos = {enemy.x, enemy.y}
         local target_pos, target_type = find_target(enemy, fsm.units, fsm.castles)
-        if target_pos then
+        printh('target_pos: ' .. target_pos[1]..","..target_pos[2] .. ", target_type: " .. target_type, 'logs/debug.txt')
+        -- Check if a valid target exists
+        if not target_pos then
+            end_enemy_turn(enemy)
+        else
+            -- If a target exists, proceed with movement logic
             local target_coords = get_tiles_within_distance(target_pos, enemy.Atr, function (pos)
                 local unit = get_unit_at(pos, fsm.units, false)
                 return (unit == nil or unit == enemy) and mget(pos[1], pos[2]) < 6
@@ -424,32 +448,101 @@ fsm.states.enemy_turn = setmetatable({
             local trimmed_path = a_star(enemy_pos, target_pos, target_coords, enemy.Mov, function (pos)
                 return get_unit_at(pos, fsm.units, false) == nil and mget(pos[1], pos[2]) < 6
             end)
-
             -- Use the trimmed path
             if trimmed_path and #trimmed_path > 0 then
-                for _, point in ipairs(trimmed_path) do
-                    printh("Move to: "..point[1]..","..point[2], "logs/debug.txt")
-                end
                 local dest = trimmed_path[#trimmed_path]
-                enemy_pos = dest
-                move_unit(enemy, fsm.units, dest)
-                flip_castles(dest, fsm.castles)
+                -- Initialize the cursor movement function
+                mv_cursor_func = move_cursor_along_path(trimmed_path, fsm.cursor, 5, function()
+                    move_unit(enemy, fsm.units, dest)
+                end, function()
+                    -- Check if combat should start
+                    if target_type == "unit" and heuristic(dest, target_pos) <= enemy.Atr then
+                        fsm:change_state("combat", {
+                            attacker = fsm.units[vectoindex(dest)],
+                            defender = fsm.units[vectoindex(target_pos)],
+                            is_counter = false
+                        })
+                    else
+                        flip_castles(dest, fsm.castles)
+                    end
+                    -- end_enemy_turn(enemy)
+                end)
             else
-                printh("No path found.", "logs/debug.txt")
+                end_enemy_turn(enemy)
             end
         end
-        if target_type == "unit" and heuristic(enemy_pos, target_pos) <= enemy.Atr then
-            printh("In combat conditional", "logs/debug.txt")
-            fsm:change_state("combat", {
-                attacker = fsm.units[vectoindex(enemy_pos)],
-                defender = fsm.units[vectoindex(target_pos)],
-                is_counter = false
-            })
-        else
-            fsm:change_state("overworld")
+    end,
+    update = function()
+        if mv_cursor_func then
+            mv_cursor_func()
         end
     end,
-    update = function() end,
-    draw = function() end,
+    draw = function()
+        draw_units(fsm.units, function (unit)
+            return not unit.in_castle
+        end)
+        draw_cursor(fsm.cursor, true)
+    end,
+    exit = function() end
+}, { __index = base_state })
+
+fsm.states.enemy_phase = setmetatable({
+    mv_cursor_func,
+    enter = function()
+        local enemies = {}
+        for _, unit in pairs(fsm.units) do
+            if unit.team == "enemy" and not unit.exhausted then
+                local priority = (31-unit.y) * 32 + (31-unit.x)
+                insert(enemies, unit, priority)
+            end
+        end
+        if #enemies == 0 then
+            -- All enemies have acted, return to player phase
+            fsm.current_phase = "player"
+            fsm:change_state("phase_change")
+        else
+            local enemy = enemies[1][1] -- Extract the unit from the {unit, priority} table
+            local path = generate_full_path({fsm.cursor[1], fsm.cursor[2]}, {enemy.x, enemy.y})
+            mv_cursor_func = move_cursor_along_path(path, fsm.cursor, 15, nil, function()
+                -- Callback when the cursor reaches the enemy's position
+                fsm:change_state("enemy_turn", {enemy = enemy})
+            end)
+        end
+    end,
+    update = function()
+        if mv_cursor_func then
+            mv_cursor_func()
+        end
+    end,
+    draw = function()
+        draw_units(fsm.units, function (unit)
+            return not unit.in_castle
+        end)
+        draw_cursor(fsm.cursor, true)
+    end,
+    exit = function() end
+}, { __index = base_state })
+
+fsm.states.phase_change = setmetatable({
+    last, skip,
+    enter = function()
+        for _, unit in pairs(fsm.units) do
+            if (fsm.current_phase == "enemy" and unit.team == "player") or (fsm.current_phase == "player" and unit.team == "enemy") then
+                unit.exhausted = false
+            end
+        end
+        last, skip = time(), false
+    end,
+    update = function()
+        update_camera(fsm.cursor)
+        if btnp(4) then skip = true end
+        if time() - last > 3 or skip then
+            fsm:change_state(fsm.current_phase == "enemy" and "enemy_phase" or "overworld")
+        end
+    end,
+    draw = function()
+        draw_units(fsm.units, function(unit) return not unit.in_castle end)
+        draw_phase_text(fsm.current_phase)
+    end,
     exit = function() end
 }, { __index = base_state })
