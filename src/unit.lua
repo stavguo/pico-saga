@@ -68,35 +68,6 @@ function get_neighbors(pos, filter_func)
     return neighbors
 end
 
-function find_traversable_tiles(start, movement, filter_func)
-    traversable_tiles = {} -- Clear previous tiles
-    traversable_tiles[vectoindex(start)] = 0
-
-    local frontier = {{start[1], start[2]}}
-    local costs = {}
-    costs[vectoindex(start)] = 0
-
-    while #frontier > 0 do
-        local current = deli(frontier, 1)
-        local neighbors = get_neighbors(current)
-        for _, n in pairs(neighbors) do
-            local key = vectoindex(n)
-            local cost = TERRAIN_COSTS[mget(n[1], n[2])]
-            if cost then
-                local new_cost = costs[vectoindex(current)] + cost
-                if new_cost <= movement and (not costs[key] or new_cost < costs[key]) then
-                    if filter_func == nil or filter_func(n) then
-                        costs[key] = new_cost
-                        add(frontier, n)
-                        traversable_tiles[key] = new_cost
-                    end
-                end
-            end
-        end
-    end
-    return traversable_tiles
-end
-
 function init_player_units(units)
     local player_classes = {
         "Sword", "Sword", "Sword",

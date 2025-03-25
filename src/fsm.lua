@@ -179,7 +179,7 @@ fsm.states.move_unit = setmetatable({
         traversable_tiles = find_traversable_tiles(fsm.cursor, fsm.selected_unit.Mov, function (pos)
             -- Check if the tile is occupied by an opposing unit
             local unit = get_unit_at(pos, fsm.units)
-            return (unit == nil or unit == fsm.cursor.team) and mget(pos[1], pos[2]) < 6
+            return (unit == nil or unit.team == fsm.selected_unit.team) and mget(pos[1], pos[2]) < 6
         end)
     end,
     update = function()
@@ -387,11 +387,11 @@ fsm.states.combat = setmetatable({
                     is_counter = true
                 })  -- Loop back to handle counterattack
             else
-                if (hit and is_broken) then
-                    attacker.exhausted = true
-                else
-                    defender.exhausted = true
-                end
+                -- if (hit and is_broken) then
+                --     attacker.exhausted = true
+                -- else
+                --     defender.exhausted = true
+                -- end
                 is_counter, attacker, defender = false
                 fsm:change_state("overworld")
             end
@@ -411,45 +411,47 @@ fsm.states.combat = setmetatable({
 }, { __index = base_state })
 
 fsm.states.enemy_turn = setmetatable({
-    enemy,
+    enemy, co, step, -- 0=find, 1=move, 2=attack/standby
     enter = function(payload)
+        step = 0
         enemy = payload.enemy
-        local enemy_pos = {enemy.x, enemy.y}
-        local target_pos, target_type = find_target(enemy, fsm.units, fsm.castles)
-        if target_pos then
-            local target_coords = get_tiles_within_distance(target_pos, enemy.Atr, function (pos)
-                local unit = get_unit_at(pos, fsm.units, false)
-                return (unit == nil or unit == enemy) and mget(pos[1], pos[2]) < 6
-            end)
-            local trimmed_path = a_star(enemy_pos, target_pos, target_coords, enemy.Mov, function (pos)
-                return get_unit_at(pos, fsm.units, false) == nil and mget(pos[1], pos[2]) < 6
-            end)
-
-            -- Use the trimmed path
-            if trimmed_path and #trimmed_path > 0 then
-                for _, point in ipairs(trimmed_path) do
-                    printh("Move to: "..point[1]..","..point[2], "logs/debug.txt")
-                end
-                local dest = trimmed_path[#trimmed_path]
-                enemy_pos = dest
-                move_unit(enemy, fsm.units, dest)
-                flip_castles(dest, fsm.castles)
-            else
-                printh("No path found.", "logs/debug.txt")
+        co = assert(cocreate(find_optimal_attack_path))
+    end,
+    update = function()
+        if not co then return end
+        local ok, result = coresume(co, enemy, fsm.units, fsm.castles, function (pos)
+            local unit = get_unit_at(pos, fsm.units)
+            return (unit == nil or unit.team == fsm.selected_unit.team) and mget(pos[1], pos[2]) < 6
+        end)
+        if ok and costatus(co) == "dead" then
+            if step == 0 then
+                co = create_path_follower(
+                    result,  -- your path
+                    0.2,  -- interval
+                    function(point)
+                        fsm.cursor = {point[1], point[2]}
+                        update_camera(fsm.cursor)
+                    end,
+                    function()
+                        move_unit(enemy, fsm.units, fsm.cursor)
+                    end
+                )
+                step = 1-- co = cocreate(stall)
+            elseif step == 1 then
+                fsm:change_state("overworld")
             end
         end
-        if target_type == "unit" and heuristic(enemy_pos, target_pos) <= enemy.Atr then
-            printh("In combat conditional", "logs/debug.txt")
-            fsm:change_state("combat", {
-                attacker = fsm.units[vectoindex(enemy_pos)],
-                defender = fsm.units[vectoindex(target_pos)],
-                is_counter = false
-            })
-        else
-            fsm:change_state("overworld")
+    end,
+    draw = function()
+        draw_units(fsm.units, function(unit)
+            return not unit.in_castle
+        end)
+        draw_cursor(fsm.cursor, true)
+        draw_cursor_coords(fsm.cursor)
+        -- Draw "Loading" text while finding the target
+        if step == 0 then
+            draw_centered_text("Thinking...", 7)
         end
     end,
-    update = function() end,
-    draw = function() end,
     exit = function() end
 }, { __index = base_state })

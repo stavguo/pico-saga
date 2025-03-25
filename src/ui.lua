@@ -51,3 +51,10 @@ function draw_ui(cursor, ui_stack)
         end
     end
 end
+
+function draw_centered_text(text, color_idx)
+    local x, y = peek2(0x5f28) + hcenter(text), peek2(0x5f2a) + 61
+    rectfill(x-1, y-1, x + #text*4, y+4, 0)
+    color(color_idx)
+    print(text, x, y)
+end
