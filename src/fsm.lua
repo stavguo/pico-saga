@@ -43,6 +43,7 @@ fsm.states.setup = setmetatable({
             printh("", "logs/seeds.txt", true)
             _seeds_initialized = true
         end
+        printh("", "logs/debug.txt", true)
         printh(
             "Generated map with seed: " .. seed .."/" .. treeseed ..
             " at " .. stat(93) .. ":" .. stat(94) .. ":" .. stat(95),
@@ -411,47 +412,63 @@ fsm.states.combat = setmetatable({
 }, { __index = base_state })
 
 fsm.states.enemy_turn = setmetatable({
-    enemy, co, step, -- 0=find, 1=move, 2=attack/standby
+    co,
     enter = function(payload)
-        step = 0
-        enemy = payload.enemy
-        co = assert(cocreate(find_optimal_attack_path))
+        local enemy = payload.enemy
+        co = cocreate(function()
+            -- Find path phase
+            local path = find_optimal_attack_path(enemy, fsm.units, fsm.castles, function(pos)
+                local unit = get_unit_at(pos, fsm.units)
+                return (unit == nil or unit.team == enemy.team) and mget(pos[1], pos[2]) < 6
+            end)
+            
+            if path ~= nil and #path > 0 then
+                path = trim_path_tail_by_costs(path, enemy.Mov)
+                path = trim_path_tail_if_occupied(path, fsm.units)
+                -- Movement phase with timing
+                for i=1,#path do
+                    local v = indextovec(path[i])
+                    fsm.cursor = {v[1], v[2]}
+                    update_camera(fsm.cursor)
+                    -- Wait 0.2 seconds between moves
+                    local last_move_time = time()
+                    while time() - last_move_time < 0.2 do
+                        yield()
+                    end
+                end
+                move_unit(enemy, fsm.units, fsm.cursor)
+            end
+            
+            player_units = {}
+            local tiles = get_tiles_within_distance(fsm.cursor, enemy.Atr)
+            for _, tile in ipairs(tiles) do
+                local unit = get_unit_at(tile, fsm.units, false)
+                if unit and unit.team == "player" then
+                    add(player_units, unit)
+                end
+            end
+
+            if #player_units == 0 then
+                fsm:change_state("overworld")
+            else
+                SHUFFLE(player_units)
+                fsm:change_state("combat", {
+                    attacker = enemy,
+                    defender = player_units[1],
+                    is_counter = false
+                })
+            end
+        end)
     end,
     update = function()
         if not co then return end
-        local ok, result = coresume(co, enemy, fsm.units, fsm.castles, function (pos)
-            local unit = get_unit_at(pos, fsm.units)
-            return (unit == nil or unit.team == fsm.selected_unit.team) and mget(pos[1], pos[2]) < 6
-        end)
-        if ok and costatus(co) == "dead" then
-            if step == 0 then
-                co = create_path_follower(
-                    result,  -- your path
-                    0.2,  -- interval
-                    function(point)
-                        fsm.cursor = {point[1], point[2]}
-                        update_camera(fsm.cursor)
-                    end,
-                    function()
-                        move_unit(enemy, fsm.units, fsm.cursor)
-                    end
-                )
-                step = 1-- co = cocreate(stall)
-            elseif step == 1 then
-                fsm:change_state("overworld")
-            end
+        local active, exception = coresume(co)
+        if exception then
+            stop(trace(co, exception))
         end
     end,
     draw = function()
-        draw_units(fsm.units, function(unit)
-            return not unit.in_castle
-        end)
+        draw_units(fsm.units, function(u) return not u.in_castle end)
         draw_cursor(fsm.cursor, true)
-        draw_cursor_coords(fsm.cursor)
-        -- Draw "Loading" text while finding the target
-        if step == 0 then
-            draw_centered_text("Thinking...", 7)
-        end
-    end,
-    exit = function() end
+    end
 }, { __index = base_state })
