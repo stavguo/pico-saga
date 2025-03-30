@@ -210,3 +210,23 @@ function reconstruct_path(prev, target_key)
     reverse(path)
     return path
 end
+
+function generate_full_path(start, goal)
+    local path, dx, dy = {}, goal[1] - start[1], goal[2] - start[2]
+    if abs(dx) > abs(dy) then
+        for x = start[1], goal[1], dx > 0 and 1 or -1 do
+            add(path, {x, start[2]})
+        end
+        for y = start[2], goal[2], dy > 0 and 1 or -1 do
+            add(path, {goal[1], y})
+        end
+    else
+        for y = start[2], goal[2], dy > 0 and 1 or -1 do
+            add(path, {start[1], y})
+        end
+        for x = start[1], goal[1], dx > 0 and 1 or -1 do
+            add(path, {x, goal[2]})
+        end
+    end
+    return path
+end

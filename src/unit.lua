@@ -191,13 +191,17 @@ end
 function hit_chance(attacker, defender)
     local terrain = mget(defender.x, defender.y)
     local terrain_effect = TERRAIN_EFFECTS[terrain] or 0
-    local base_hit_rate = 70  -- Example base hit rate
+    local base_hit_rate = 80  -- Example base hit rate
     local accuracy = base_hit_rate + (attacker.Skl) - (defender.Spd + terrain_effect)
     return mid(0, accuracy, 100)  -- Clamp between 0% and 100%
 end
 
 function calculate_damage(attacker, defender)
-    local damage = attacker.Str > attacker.Mag and attacker.Str - defender.Def or attacker.Mag - defender.Mdf
+    local attack = attacker.Str > attacker.Mag and attacker.Str or attacker.Mag
+    local defense = attacker.Str > attacker.Mag and defender.Def or defender.Mdf
+    if is_attacker_advantage(attacker, defender) then defense = 0 end
+    if is_attacker_advantage(defender, attacker) then defense = defense * 2 end
+    local damage = attack - defense
     return max(1, damage)  -- Ensure at least 1 damage
 end
 
@@ -262,4 +266,14 @@ function draw_nonselected_overworld_units(selected, units)
     draw_units(units, function (unit)
         return unit ~= selected and not unit.in_castle
     end)
+end
+
+function is_phase_over(team, units)
+    local actionable = false
+    for _, unit in pairs(units) do
+        if unit.team == team and not unit.exhausted then
+            actionable = true
+        end
+    end
+    return not actionable
 end

@@ -7,6 +7,7 @@ local base_state = {
 
 fsm = {
     current_state = "overworld",
+    phase = "player",
     selected_unit = nil,
     selected_castle = nil,
     castles = {},
@@ -58,7 +59,8 @@ fsm.states.setup = setmetatable({
         init_player_units(fsm.units)
         init_enemy_units(fsm.units, fsm.castles, 4)
 
-        fsm:change_state("overworld")
+        fsm.phase = "player"
+        fsm:change_state("phase_change")
     end
 }, { __index = base_state })
 
@@ -66,6 +68,10 @@ fsm.states.overworld = setmetatable({
     enter = function()
         if (fsm.selected_unit) fsm.selected_unit = nil
         if (fsm.selected_castle) fsm.selected_castle = nil
+        if is_phase_over("player", fsm.units) then
+            fsm.phase = "enemy"
+            fsm:change_state("phase_change")
+        end
     end,
     update = function()
         -- Move cursor
@@ -73,6 +79,11 @@ fsm.states.overworld = setmetatable({
 
         -- Update camera
         update_camera(fsm.cursor)
+
+        if btnp(5) then
+            fsm.phase = "enemy"
+            fsm:change_state("phase_change")
+        end
 
         -- Select castle or unit
         if btnp(4) then -- "Select" button
@@ -82,11 +93,11 @@ fsm.states.overworld = setmetatable({
                 fsm.selected_castle = {fsm.cursor[1], fsm.cursor[2]}
                 fsm:change_state("castle")
             elseif unit then
-                    fsm.selected_unit = unit
-                    fsm:change_state("unit_info")
-                end
+                fsm.selected_unit = unit
+                fsm:change_state("unit_info")
             end
-            end,
+        end
+    end,
     draw = function()
         draw_units(fsm.units, function (unit)
             return not unit.in_castle
@@ -141,9 +152,7 @@ fsm.states.unit_info = setmetatable({
     end,
     update = function()
         if btnp(0) or btnp(1) or btnp(2) or btnp(3) then
-            if (fsm.selected_unit.team == "enemy") then
-                fsm:change_state("enemy_turn", {enemy = fsm.selected_unit})
-            else
+            if (fsm.selected_unit.team == "player") then
                 if (fsm.selected_castle) exit_castle(fsm.cursor, fsm.selected_castle)
                 fsm:change_state("move_unit")
             end
@@ -259,6 +268,7 @@ fsm.states.action_menu = setmetatable({
             --     fsm:change_state("item")
             elseif selected_item == "Standby" or selected_item == "Capture" then
                 move_unit(fsm.selected_unit, fsm.units, fsm.cursor)
+                fsm.selected_unit.exhausted = true
                 if selected_item == "Capture" then
                     flip_castles({fsm.cursor[1], fsm.cursor[2]}, fsm.castles)
                 end
@@ -332,78 +342,140 @@ fsm.states.attack_menu = setmetatable({
     exit = function() end
 }, { __index = base_state })
 
-fsm.states.combat = setmetatable({
-    attacker, defender, is_counter, hit, damage, is_broken, message,
-    enter = function(payload)
-        attacker, defender, is_counter = payload.attacker, payload.defender, payload.is_counter
+-- fsm.states.combat = setmetatable({
+--     attacker, defender, is_counter, hit, damage, is_broken, message,
+--     enter = function(payload)
+--         attacker, defender, is_counter = payload.attacker, payload.defender, payload.is_counter
 
-        -- Calculate the attack outcome
-        hit = will_hit(attacker, defender)
-        damage = hit and calculate_damage(attacker, defender) or 0
-        is_broken = not is_counter and is_attacker_advantage(attacker, defender)
-        if hit then
-            -- Reduce defender's HP, ensuring it doesn't go below 0
-            local remaining_hp = max(0, defender.HP - damage)
+--         -- Calculate the attack outcome
+--         hit = will_hit(attacker, defender)
+--         damage = hit and calculate_damage(attacker, defender) or 0
+--         is_broken = not is_counter and is_attacker_advantage(attacker, defender)
+--         if hit then
+--             -- Reduce defender's HP, ensuring it doesn't go below 0
+--             local remaining_hp = max(0, defender.HP - damage)
         
-            -- Determine the action word based on whether the defender is defeated
-            local action_word
-            if remaining_hp <= 0 then
-                action_word = "defeated"
-            elseif is_broken then
-                action_word = "broke"
-            else
-                action_word = "hit"
+--             -- Determine the action word based on whether the defender is defeated
+--             local action_word
+--             if remaining_hp <= 0 then
+--                 action_word = "defeated"
+--             elseif is_broken then
+--                 action_word = "broke"
+--             else
+--                 action_word = "hit"
+--             end
+        
+--             -- Construct the message based on the action word
+--             message = {
+--                 attacker.team .. " " .. attacker.class .. " " .. action_word,
+--                 defender.team .. " " .. defender.class,
+--                 "for " .. damage .. " damage!"
+--             }
+--         else
+--             -- Construct the message for a missed attack
+--             message = {
+--                 attacker.team .. " " .. attacker.class .. " attack missed..."
+--             }
+--         end
+--         -- Display the result
+--         create_ui(message, fsm.ui, false)
+--     end,
+--     update = function()
+--         if btnp(4) or btnp(5) then  -- "Select" or "Back" button
+--             -- Apply the attack effects
+--             if hit then
+--                 defender.HP = max(0, defender.HP - damage)
+--                 if defender.HP <= 0 then
+--                     fsm.units[vectoindex({defender.x,defender.y})] = nil
+--                 end
+--             end
+--             -- Check for counterattack
+--             if (not hit and not is_counter) or (not is_counter and defender.HP > 0 and not is_attacker_advantage(attacker, defender)) then
+--                 -- Swap attacker and defender for counterattack
+--                 fsm:change_state("combat", {
+--                     attacker = defender,
+--                     defender = attacker,
+--                     is_counter = true
+--                 })  -- Loop back to handle counterattack
+--             else
+--                 if (hit and is_broken) then
+--                     attacker.exhausted = true
+--                 else
+--                     defender.exhausted = true
+--                 end
+--                 is_counter, attacker, defender = false
+--                 fsm:change_state(fsm.phase == "enemy" and "enemy_phase" or "overworld")
+--             end
+--         end
+--     end,
+--     draw = function()
+--         draw_units(fsm.units, function (unit)
+--             return unit ~= attacker and unit ~= defender and not unit.in_castle
+--         end, false)
+--         draw_unit_at(attacker, nil, nil, true)
+--         draw_unit_at(defender, nil, nil, true)
+--         draw_ui(fsm.cursor, fsm.ui)
+--     end,
+--     exit = function()
+--         fsm.ui = {}
+--     end
+-- }, { __index = base_state })
+
+fsm.states.combat = setmetatable({
+    co, attacker, defender,
+    enter = function(p)
+        co = cocreate(function()
+            local function process_attack(atk, def, is_counter)
+                local hit = will_hit(atk, def)
+                local dmg = hit and calculate_damage(atk, def) or 0
+                local broken = is_counter and false or is_attacker_advantage(atk, def)
+                
+                -- Build message
+                local msg = hit and {
+                    atk.team.." "..atk.class.." "..(def.HP - dmg <= 0 and "defeated" or broken and "broke" or "hit"),
+                    def.team.." "..def.class,
+                    "for "..dmg.." damage!"
+                } or {atk.team.." "..atk.class.." attack missed..."}
+                
+                create_ui(msg, fsm.ui, false)
+                yield() -- Show message
+                fsm.ui = {} -- Clear UI
+                
+                -- Apply damage
+                if hit then
+                    def.HP = max(0, def.HP - dmg)
+                    if def.HP <= 0 then
+                        fsm.units[vectoindex({def.x, def.y})] = nil
+                    end
+                end
+                
+                return hit, broken
             end
-        
-            -- Construct the message based on the action word
-            message = {
-                attacker.team .. " " .. attacker.class .. " " .. action_word,
-                defender.team .. " " .. defender.class,
-                "for " .. damage .. " damage!"
-            }
-        else
-            -- Construct the message for a missed attack
-            message = {
-                attacker.team .. " " .. attacker.class .. " attack missed..."
-            }
-        end
-        -- Display the result
-        create_ui(message, fsm.ui, false)
+            
+            -- Main combat flow
+            attacker, defender = p.attacker, p.defender
+            local hit, broken = process_attack(attacker, defender, false)
+            
+            -- Counterattack if applicable
+            if defender.HP > 0 and (not hit or not broken) then
+                process_attack(defender, attacker, true)
+            end
+            
+            -- End combat
+            attacker.exhausted = true
+            fsm:change_state(fsm.phase == "enemy" and "enemy_phase" or "overworld")
+        end)
+        coresume(co)
     end,
     update = function()
-        if btnp(4) or btnp(5) then  -- "Select" or "Back" button
-            -- Apply the attack effects
-            if hit then
-                defender.HP = max(0, defender.HP - damage)
-                if defender.HP <= 0 then
-                    fsm.units[vectoindex({defender.x,defender.y})] = nil
-                end
-            end
-            -- Check for counterattack
-            if (not hit and not is_counter) or (not is_counter and defender.HP > 0 and not is_attacker_advantage(attacker, defender)) then
-                -- Swap attacker and defender for counterattack
-                fsm:change_state("combat", {
-                    attacker = defender,
-                    defender = attacker,
-                    is_counter = true
-                })  -- Loop back to handle counterattack
-            else
-                -- if (hit and is_broken) then
-                --     attacker.exhausted = true
-                -- else
-                --     defender.exhausted = true
-                -- end
-                is_counter, attacker, defender = false
-                fsm:change_state("overworld")
-            end
-        end
+        if btnp(4) or btnp(5) then coresume(co) end
     end,
     draw = function()
-        draw_units(fsm.units, function (unit)
-            return unit ~= attacker and unit ~= defender and not unit.in_castle
+        draw_units(fsm.units, function(u)
+            return u ~= attacker and u ~= defender and not u.in_castle
         end, false)
-        draw_unit_at(attacker, nil, nil, true)
-        draw_unit_at(defender, nil, nil, true)
+        if attacker then draw_unit_at(attacker, nil, nil, true) end
+        if defender then draw_unit_at(defender, nil, nil, true) end
         draw_ui(fsm.cursor, fsm.ui)
     end,
     exit = function()
@@ -415,6 +487,7 @@ fsm.states.enemy_turn = setmetatable({
     co,
     enter = function(payload)
         local enemy = payload.enemy
+        fsm.selected_unit = enemy
         co = cocreate(function()
             -- Find path phase
             local path = find_optimal_attack_path(enemy, fsm.units, fsm.castles, function(pos)
@@ -449,7 +522,8 @@ fsm.states.enemy_turn = setmetatable({
             end
 
             if #player_units == 0 then
-                fsm:change_state("overworld")
+                enemy.exhausted = true
+                fsm:change_state("enemy_phase")
             else
                 SHUFFLE(player_units)
                 fsm:change_state("combat", {
@@ -468,7 +542,91 @@ fsm.states.enemy_turn = setmetatable({
         end
     end,
     draw = function()
-        draw_units(fsm.units, function(u) return not u.in_castle end)
+        -- draw_units(fsm.units, function(u) return not u.in_castle end)
+        draw_nonselected_overworld_units(fsm.selected_unit, fsm.units)
+        draw_unit_at(fsm.selected_unit, nil, nil, true)
         draw_cursor(fsm.cursor, true)
     end
+}, { __index = base_state })
+
+fsm.states.enemy_phase = setmetatable({
+    co,
+    enter = function()
+        local enemies = {}
+        for _, unit in pairs(fsm.units) do
+            if unit.team == "enemy" and not unit.exhausted then
+                local priority = (31-unit.y) * 32 + (31-unit.x)
+                insert(enemies, unit, priority)
+            end
+        end
+        if #enemies == 0 then
+            -- All enemies have acted, return to player phase
+            fsm.phase = "player"
+            fsm:change_state("phase_change")
+        else
+            co = cocreate(function()
+                local enemy = enemies[1][1] -- Extract the unit from the {unit, priority} table
+                local path = generate_full_path({fsm.cursor[1], fsm.cursor[2]}, {enemy.x, enemy.y})
+                for i=1,#path do
+                    local v = path[i]
+                    fsm.cursor = {v[1], v[2]}
+                    update_camera(fsm.cursor)
+                    -- Wait 0.2 seconds between moves
+                    local last_move_time = time()
+                    while time() - last_move_time < 0.05 do
+                        yield()
+                    end
+                end
+                fsm:change_state("enemy_turn", {enemy=enemy})
+            end)
+        end
+    end,
+    update = function()
+        if not co then return end
+        local active, exception = coresume(co)
+        if exception then
+            stop(trace(co, exception))
+        end
+    end,
+    draw = function()
+        draw_units(fsm.units, function (unit)
+            return not unit.in_castle
+        end)
+        draw_cursor(fsm.cursor, true)
+    end,
+    exit = function() end
+}, { __index = base_state })
+
+fsm.states.phase_change = setmetatable({
+    co,
+    enter = function()
+        for _, unit in pairs(fsm.units) do
+            if (fsm.phase == "enemy" and unit.team == "player") or (fsm.phase == "player" and unit.team == "enemy") then
+                unit.exhausted = false
+            end
+        end
+        co = cocreate(function()
+            local last_move_time = time()
+            while time() - last_move_time < 3.0 do
+                yield()
+            end
+            fsm:change_state(fsm.phase == "enemy" and "enemy_phase" or "overworld")
+        end)
+    end,
+    update = function()
+        update_camera(fsm.cursor)
+        if btnp(4) then fsm:change_state(fsm.phase == "enemy" and "enemy_phase" or "overworld") end
+        local active, exception = coresume(co)
+        if exception then
+            stop(trace(co, exception))
+        end
+    end,
+    draw = function()
+        draw_units(fsm.units, function(unit) return not unit.in_castle end)
+        draw_centered_text(
+            (fsm.phase == "enemy") and "Enemy Phase" or "Player Phase",
+            (fsm.phase == "enemy") and 8 or 12
+        )
+    end,
+    exit = function() end
 }, { __index = base_state })
