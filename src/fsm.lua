@@ -141,6 +141,7 @@ fsm.states.castle = setmetatable({
 }, { __index = base_state })
 
 fsm.states.unit_info = setmetatable({
+    traversable_tiles,
     enter = function()
         create_ui({
             fsm.selected_unit.team.." "..fsm.selected_unit.class
@@ -149,11 +150,21 @@ fsm.states.unit_info = setmetatable({
             "HP: " .. fsm.selected_unit.HP .. " Mov: " .. fsm.selected_unit.Mov,
             (fsm.selected_unit.team == "enemy" and "AI: "..fsm.selected_unit.enemy_ai or nil)
         }, fsm.ui, false)
+        if not fsm.selected_castle then
+            traversable_tiles = find_traversable_tiles(fsm.cursor, fsm.selected_unit.Mov, function (pos)
+                -- Check if the tile is occupied by an opposing unit
+                local unit = get_unit_at(pos, fsm.units)
+                return (unit == nil or unit.team == fsm.selected_unit.team) and mget(pos[1], pos[2]) < 6
+            end)
+        end
     end,
     update = function()
         if btnp(0) or btnp(1) or btnp(2) or btnp(3) then
             if (fsm.selected_unit.team == "player") then
                 fsm:change_state("move_unit")
+            else
+                update_cursor(fsm.cursor, 31, 31)
+                update_camera(fsm.cursor)
             end
         elseif btnp(5) then -- "Back" button
             if fsm.selected_castle then
@@ -170,6 +181,7 @@ fsm.states.unit_info = setmetatable({
                 return unit.in_castle
             end)
         else
+            draw_traversable_edges(traversable_tiles, fsm.selected_unit.team == "player" and 7 or 8)
             draw_nonselected_overworld_units(fsm.selected_unit, fsm.units)
         end
         draw_unit_at(fsm.selected_unit, nil, nil, true)
@@ -224,13 +236,9 @@ fsm.states.move_unit = setmetatable({
         end
     end,
     draw = function()
+        draw_traversable_edges(traversable_tiles, 7)
         draw_nonselected_overworld_units(fsm.selected_unit, fsm.units)
-        if fsm.selected_castle then
-            draw_unit_at(fsm.selected_unit, fsm.selected_castle[1], fsm.selected_castle[2], true)
-        else
-            draw_unit_at(fsm.selected_unit, nil, nil, true)
-        end
-        draw_cursor(fsm.cursor, true)
+        draw_unit_at(fsm.selected_unit, fsm.cursor[1], fsm.cursor[2], true)
         draw_cursor_coords(fsm.cursor)
     end,
     exit = function() end

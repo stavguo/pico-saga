@@ -47,3 +47,43 @@ function init_terrain(noise_fn, tree_fn)
         end
     end
 end
+
+function draw_traversable_edges(traversable_tiles, col)
+    -- Create lookup table
+    local traversable_lookup = {}
+    for key,_ in pairs(traversable_tiles) do
+        traversable_lookup[key] = true
+    end
+
+    -- Set line color (7 is white, change as needed)
+    color(col)
+
+    for key,_ in pairs(traversable_lookup) do
+        local pos = indextovec(key)
+        local x, y = pos[1], pos[2]
+        
+        -- Get screen coordinates
+        local sx, sy = x*8, y*8
+        
+        -- Check each edge (up, right, down, left)
+        -- Up edge
+        if not traversable_lookup[vectoindex({x, y-1})] then
+            line(sx, sy, sx+8, sy)  -- Top edge
+        end
+        
+        -- Right edge
+        if not traversable_lookup[vectoindex({x+1, y})] then
+            line(sx+8, sy, sx+8, sy+8)  -- Right edge
+        end
+        
+        -- Down edge
+        if not traversable_lookup[vectoindex({x, y+1})] then
+            line(sx, sy+8, sx+8, sy+8)  -- Bottom edge
+        end
+        
+        -- Left edge
+        if not traversable_lookup[vectoindex({x-1, y})] then
+            line(sx, sy, sx, sy+8)  -- Left edge
+        end
+    end
+end
