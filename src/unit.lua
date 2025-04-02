@@ -1,4 +1,4 @@
-function create_unit(x, y, class, team, in_castle, enemy_ai)
+function create_unit(x, y, class, team, in_castle, enemy_ai, castle_idx)
     return {
         x = x,
         y = y,
@@ -16,6 +16,7 @@ function create_unit(x, y, class, team, in_castle, enemy_ai)
         Mov = UNIT_STATS[class].Mov,
         Atr = UNIT_STATS[class].Atr,
         enemy_ai = enemy_ai,
+        castle_idx = castle_idx,
         exhausted = false
     }
 end
@@ -112,7 +113,7 @@ function init_enemy_units(units, castles, movement_distance)
 
     local counter = 1
     -- Loop through each castle
-    for _, castle in pairs(castles) do
+    for castle_idx, castle in pairs(castles) do
         if castle.team == "enemy" then  -- Only place units around enemy castles
             -- Find traversable tiles around the castle within the specified movement distance
             local start = {castle.x, castle.y}
@@ -142,7 +143,7 @@ function init_enemy_units(units, castles, movement_distance)
                     local pos = indextovec(tileIdx)
 
                     -- Create the unit at the selected position
-                    units[tileIdx] = create_unit(pos[1], pos[2], enemy_classes[counter], "enemy", false, enemy_ai_options[counter])
+                    units[tileIdx] = create_unit(pos[1], pos[2], enemy_classes[counter], "enemy", false, enemy_ai_options[counter], castle_idx)
                     counter = counter + 1
                 end
             end
@@ -276,4 +277,35 @@ function is_phase_over(team, units)
         end
     end
     return not actionable
+end
+
+function sort_enemy_turn_order(units, castles)
+    local enemies = {}
+    -- First create separate lists for each castle
+    local castle_lists = {}
+    for i=1,4 do castle_lists[i] = {} end
+
+    -- Insert each unit into its castle's list, sorted by distance
+    for _,u in pairs(units) do
+        if u.team == "enemy" and not u.exhausted then
+            local max_dist = 0
+            for castle in all(castles) do
+                max_dist = max(max_dist, heuristic({castle.x,castle.y},{u.x,u.y}))
+            end
+            -- Insert into the appropriate castle's list
+            insert(castle_lists[u.castle_idx], u, max_dist)
+        end
+    end
+
+    -- Now combine all lists in castle order (1-4)
+    for castle_num=1,4 do
+        -- Since your insert maintains ascending order, we'll need to reverse each list
+        reverse(castle_lists[castle_num])
+        -- Now add all units from this castle to the final array
+        for item in all(castle_lists[castle_num]) do
+            add(enemies, item) -- item[1] is the unit, item[2] is the distance
+        end
+    end
+
+    return enemies
 end

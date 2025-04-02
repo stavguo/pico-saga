@@ -153,7 +153,6 @@ fsm.states.unit_info = setmetatable({
     update = function()
         if btnp(0) or btnp(1) or btnp(2) or btnp(3) then
             if (fsm.selected_unit.team == "player") then
-                if (fsm.selected_castle) exit_castle(fsm.cursor, fsm.selected_castle)
                 fsm:change_state("move_unit")
             end
         elseif btnp(5) then -- "Back" button
@@ -185,6 +184,11 @@ fsm.states.unit_info = setmetatable({
 fsm.states.move_unit = setmetatable({
     traversable_tiles,
     enter = function()
+        if fsm.selected_castle then
+            exit_castle(fsm.cursor, fsm.selected_castle)
+        else
+            fsm.cursor = {fsm.selected_unit.x, fsm.selected_unit.y}
+        end
         -- Show traversable tiles
         traversable_tiles = find_traversable_tiles(fsm.cursor, fsm.selected_unit.Mov, function (pos)
             -- Check if the tile is occupied by an opposing unit
@@ -342,85 +346,6 @@ fsm.states.attack_menu = setmetatable({
     exit = function() end
 }, { __index = base_state })
 
--- fsm.states.combat = setmetatable({
---     attacker, defender, is_counter, hit, damage, is_broken, message,
---     enter = function(payload)
---         attacker, defender, is_counter = payload.attacker, payload.defender, payload.is_counter
-
---         -- Calculate the attack outcome
---         hit = will_hit(attacker, defender)
---         damage = hit and calculate_damage(attacker, defender) or 0
---         is_broken = not is_counter and is_attacker_advantage(attacker, defender)
---         if hit then
---             -- Reduce defender's HP, ensuring it doesn't go below 0
---             local remaining_hp = max(0, defender.HP - damage)
-        
---             -- Determine the action word based on whether the defender is defeated
---             local action_word
---             if remaining_hp <= 0 then
---                 action_word = "defeated"
---             elseif is_broken then
---                 action_word = "broke"
---             else
---                 action_word = "hit"
---             end
-        
---             -- Construct the message based on the action word
---             message = {
---                 attacker.team .. " " .. attacker.class .. " " .. action_word,
---                 defender.team .. " " .. defender.class,
---                 "for " .. damage .. " damage!"
---             }
---         else
---             -- Construct the message for a missed attack
---             message = {
---                 attacker.team .. " " .. attacker.class .. " attack missed..."
---             }
---         end
---         -- Display the result
---         create_ui(message, fsm.ui, false)
---     end,
---     update = function()
---         if btnp(4) or btnp(5) then  -- "Select" or "Back" button
---             -- Apply the attack effects
---             if hit then
---                 defender.HP = max(0, defender.HP - damage)
---                 if defender.HP <= 0 then
---                     fsm.units[vectoindex({defender.x,defender.y})] = nil
---                 end
---             end
---             -- Check for counterattack
---             if (not hit and not is_counter) or (not is_counter and defender.HP > 0 and not is_attacker_advantage(attacker, defender)) then
---                 -- Swap attacker and defender for counterattack
---                 fsm:change_state("combat", {
---                     attacker = defender,
---                     defender = attacker,
---                     is_counter = true
---                 })  -- Loop back to handle counterattack
---             else
---                 if (hit and is_broken) then
---                     attacker.exhausted = true
---                 else
---                     defender.exhausted = true
---                 end
---                 is_counter, attacker, defender = false
---                 fsm:change_state(fsm.phase == "enemy" and "enemy_phase" or "overworld")
---             end
---         end
---     end,
---     draw = function()
---         draw_units(fsm.units, function (unit)
---             return unit ~= attacker and unit ~= defender and not unit.in_castle
---         end, false)
---         draw_unit_at(attacker, nil, nil, true)
---         draw_unit_at(defender, nil, nil, true)
---         draw_ui(fsm.cursor, fsm.ui)
---     end,
---     exit = function()
---         fsm.ui = {}
---     end
--- }, { __index = base_state })
-
 fsm.states.combat = setmetatable({
     co, attacker, defender,
     enter = function(p)
@@ -484,43 +409,51 @@ fsm.states.combat = setmetatable({
 }, { __index = base_state })
 
 fsm.states.enemy_turn = setmetatable({
-    co,
+    logic_co = nil,
+    anim_co = nil,
+    path = {},
+
     enter = function(payload)
         local enemy = payload.enemy
         fsm.selected_unit = enemy
-        co = cocreate(function()
-            -- Find path phase
-            local path = find_optimal_attack_path(enemy, fsm.units, fsm.castles, function(pos)
-                local unit = get_unit_at(pos, fsm.units)
-                return (unit == nil or unit.team == enemy.team) and mget(pos[1], pos[2]) < 6
+        logic_co = cocreate(function()
+            -- Calculate path (logic)
+            path = find_optimal_attack_path(enemy, fsm.units, fsm.castles, function(pos)
+                local u = get_unit_at(pos, fsm.units)
+                return (u == nil or u.team == enemy.team) and mget(pos[1], pos[2]) < 6
             end)
             
-            if path ~= nil and #path > 0 then
+            if path and #path > 0 then
                 path = trim_path_tail_by_costs(path, enemy.Mov)
                 path = trim_path_tail_if_occupied(path, fsm.units)
-                -- Movement phase with timing
-                for i=1,#path do
-                    local v = indextovec(path[i])
-                    fsm.cursor = {v[1], v[2]}
-                    update_camera(fsm.cursor)
-                    -- Wait 0.2 seconds between moves
-                    local last_move_time = time()
-                    while time() - last_move_time < 0.2 do
-                        yield()
+                
+                -- Start movement animation
+                anim_co = cocreate(function()
+                    for i=1,#path do
+                        local v = indextovec(path[i])
+                        fsm.cursor = {v[1], v[2]}
+                        update_camera(fsm.cursor)
+                        local t = time()
+                        while time() - t < 0.2 do yield() end
                     end
+                end)
+                
+                -- Wait for animation completion (or skip)
+                while anim_co and costatus(anim_co) ~= "dead" do
+                    yield()
                 end
+                
                 move_unit(enemy, fsm.units, fsm.cursor)
             end
             
-            player_units = {}
-            local tiles = get_tiles_within_distance(fsm.cursor, enemy.Atr)
-            for _, tile in ipairs(tiles) do
-                local unit = get_unit_at(tile, fsm.units, false)
-                if unit and unit.team == "player" then
-                    add(player_units, unit)
-                end
+            -- Find attack targets (pure logic)
+            local player_units = {}
+            for _,t in ipairs(get_tiles_within_distance(fsm.cursor, enemy.Atr)) do
+                local u = get_unit_at(t, fsm.units, false)
+                if u and u.team == "player" then add(player_units, u) end
             end
 
+            -- Transition to next state
             if #player_units == 0 then
                 enemy.exhausted = true
                 fsm:change_state("enemy_phase")
@@ -534,67 +467,103 @@ fsm.states.enemy_turn = setmetatable({
             end
         end)
     end,
+
     update = function()
-        if not co then return end
-        local active, exception = coresume(co)
-        if exception then
-            stop(trace(co, exception))
+        if btnp(4) and anim_co then
+            -- Skip animation
+            anim_co = nil
+            if #path > 0 then
+                local v = indextovec(path[#path])
+                fsm.cursor = {v[1], v[2]}
+                update_camera(fsm.cursor)
+            end
         end
+        
+        if logic_co then coresume(logic_co) end
+        if anim_co then coresume(anim_co) end
     end,
+
     draw = function()
-        -- draw_units(fsm.units, function(u) return not u.in_castle end)
         draw_nonselected_overworld_units(fsm.selected_unit, fsm.units)
-        draw_unit_at(fsm.selected_unit, nil, nil, true)
-        draw_cursor(fsm.cursor, true)
+        draw_unit_at(fsm.selected_unit, fsm.cursor[1], fsm.cursor[2], true)
+    end,
+
+    exit = function()
+        logic_co, anim_co = nil, nil
+        path = {}
     end
 }, { __index = base_state })
 
 fsm.states.enemy_phase = setmetatable({
-    co,
+    logic_co = nil,
+    anim_co = nil,
+    current_enemy = nil,
+    path = {},
+
     enter = function()
-        local enemies = {}
-        for _, unit in pairs(fsm.units) do
-            if unit.team == "enemy" and not unit.exhausted then
-                local priority = (31-unit.y) * 32 + (31-unit.x)
-                insert(enemies, unit, priority)
+        local enemies = sort_enemy_turn_order(fsm.units, fsm.castles)
+        printh("amount of enemies: "..#enemies, "logs/debug.txt")
+        logic_co = cocreate(function()
+            -- Find all active enemies (logic coroutine)
+            
+            -- printh("current enemy: "..enemies[1], "logs/debug.txt")
+            
+            if #enemies == 0 then
+                fsm.phase = "player"
+                fsm:change_state("phase_change")
+            else
+                current_enemy = enemies[1][1]
+                path = generate_full_path({fsm.cursor[1], fsm.cursor[2]}, {current_enemy.x, current_enemy.y})
+                
+                -- Start animation coroutine
+                anim_co = cocreate(function()
+                    for i=1,#path do
+                        local v = path[i]
+                        fsm.cursor = {v[1], v[2]}
+                        update_camera(fsm.cursor)
+                        local t = time()
+                        while time() - t < 0.05 do
+                            yield()
+                        end
+                    end
+                end)
+                
+                -- Wait for animation to complete (or be skipped)
+                while anim_co and costatus(anim_co) ~= "dead" do
+                    yield()
+                end
+                
+                -- Proceed to enemy turn
+                fsm:change_state("enemy_turn", {enemy=current_enemy})
+            end
+        end)
+    end,
+
+    update = function()
+        if btnp(4) and anim_co then
+            -- Skip animation by killing the anim coroutine
+            anim_co = nil
+            -- Jump to final position
+            if #path > 0 then
+                local v = path[#path]
+                fsm.cursor = {v[1], v[2]}
+                update_camera(fsm.cursor)
             end
         end
-        if #enemies == 0 then
-            -- All enemies have acted, return to player phase
-            fsm.phase = "player"
-            fsm:change_state("phase_change")
-        else
-            co = cocreate(function()
-                local enemy = enemies[1][1] -- Extract the unit from the {unit, priority} table
-                local path = generate_full_path({fsm.cursor[1], fsm.cursor[2]}, {enemy.x, enemy.y})
-                for i=1,#path do
-                    local v = path[i]
-                    fsm.cursor = {v[1], v[2]}
-                    update_camera(fsm.cursor)
-                    -- Wait 0.2 seconds between moves
-                    local last_move_time = time()
-                    while time() - last_move_time < 0.05 do
-                        yield()
-                    end
-                end
-                fsm:change_state("enemy_turn", {enemy=enemy})
-            end)
-        end
+        
+        if logic_co then coresume(logic_co) end
+        if anim_co then coresume(anim_co) end
     end,
-    update = function()
-        if not co then return end
-        local active, exception = coresume(co)
-        if exception then
-            stop(trace(co, exception))
-        end
-    end,
+
     draw = function()
-        draw_units(fsm.units, function (unit)
-            return not unit.in_castle
-        end)
+        draw_units(fsm.units, function(u) return not u.in_castle end)
         draw_cursor(fsm.cursor, true)
     end,
-    exit = function() end
+
+    exit = function()
+        logic_co, anim_co = nil, nil
+        current_enemy, path = nil, {}
+    end
 }, { __index = base_state })
 
 fsm.states.phase_change = setmetatable({
