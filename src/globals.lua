@@ -12,7 +12,6 @@ TERRAIN_COSTS = {
 
 -- Terrain Effects on Hit Rate
 TERRAIN_EFFECTS = {
-    [1] = 0,   -- Plains
     [3] = 20, -- Forest
     [4] = 30, -- Thicket
     [2] = 10,  -- Shoal
