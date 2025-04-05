@@ -104,10 +104,9 @@ function init_enemy_units(units, castles, movement_distance)
     }
     SHUFFLE(enemy_classes)
     local enemy_ai_options = {
-        ENEMY_AI.CHARGE, ENEMY_AI.CHARGE, ENEMY_AI.CHARGE,
-        ENEMY_AI.RANGE, ENEMY_AI.RANGE, ENEMY_AI.RANGE,
-        ENEMY_AI.RANGE_2, ENEMY_AI.RANGE_2, ENEMY_AI.RANGE_2,
-        ENEMY_AI.LINKED, ENEMY_AI.LINKED, ENEMY_AI.LINKED
+        ENEMY_AI.CHARGE, ENEMY_AI.CHARGE, ENEMY_AI.CHARGE, ENEMY_AI.CHARGE,
+        ENEMY_AI.RANGE, ENEMY_AI.RANGE, ENEMY_AI.RANGE, ENEMY_AI.RANGE,
+        ENEMY_AI.RANGE_2, ENEMY_AI.RANGE_2, ENEMY_AI.RANGE_2, ENEMY_AI.RANGE_2
     }
     SHUFFLE(enemy_ai_options)
 

@@ -143,8 +143,7 @@ fsm.states.unit_info = setmetatable({
     enter = function()
         create_ui({
             fsm.selected_unit.team.." "..fsm.selected_unit.class,
-            "HP:" .. fsm.selected_unit.HP .. " Mov:" .. fsm.selected_unit.Mov,
-            (fsm.selected_unit.team == "enemy" and "AI: "..fsm.selected_unit.enemy_ai or nil)
+            "HP:" .. fsm.selected_unit.HP .. " Mov:" .. fsm.selected_unit.Mov
         }, fsm.ui, false)
         if not fsm.selected_castle then
             traversable_tiles = find_traversable_tiles(fsm.cursor, fsm.selected_unit.Mov, function (pos)
@@ -317,7 +316,7 @@ fsm.states.attack_menu = setmetatable({
         fsm.ui = {}
         local top = (fsm.cursor[2] - (peek2(0x5f2a) \ 8)) < 8
         local above_unit = get_unit_at(fsm.cursor, fsm.units, false)
-        if above_unit and above_unit.team == "enemy" then
+                if above_unit and above_unit.team == "enemy" then
             create_ui({
                 fsm.selected_unit.team.." "..fsm.selected_unit.class,
                 "HP:"..fsm.selected_unit.HP,

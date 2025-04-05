@@ -50,9 +50,7 @@ WEAPON_TRIANGLE = {
 ENEMY_AI = {
     CHARGE = "CHARGE",
     RANGE = "RANGE",
-    GUARD = "GUARD",
-    RANGE_2 = "RANGE_2",
-    LINKED = "LINKED"
+    RANGE_2 = "RANGE_2"
 }
 
 function SHUFFLE(items)

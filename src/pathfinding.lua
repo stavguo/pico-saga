@@ -1,9 +1,7 @@
 -- Uniform cost search implementation that limits search range based on unit movement
 function find_traversable_tiles(start, movement, filter_func)
-    traversable_tiles = {} -- Clear previous tiles
-    traversable_tiles[vectoindex(start)] = 0
-
     local frontier = {{start[1], start[2]}}
+    local prev = {}
     local costs = {}
     costs[vectoindex(start)] = 0
 
@@ -18,14 +16,14 @@ function find_traversable_tiles(start, movement, filter_func)
                 if new_cost <= movement and (not costs[key] or new_cost < costs[key]) then
                     if filter_func == nil or filter_func(n) then
                         costs[key] = new_cost
+                        prev[key] = vectoindex(current)
                         add(frontier, n)
-                        traversable_tiles[key] = new_cost
                     end
                 end
             end
         end
     end
-    return traversable_tiles
+    return costs, prev
 end
 
 -- A* algorithm implementation that trims path based on unit movement
@@ -159,9 +157,18 @@ function find_optimal_attack_path(finder, units, castles, filter_func)
 
     if next(attackable) == nil then return {} end
 
-    -- 2. Perform Dijkstra to find movement costs
-    local start_key = vectoindex({finder.x, finder.y})
-    local costs, prev = dijkstra(start_key, filter_func)
+    -- 2. Perform pathfinding to find movement costs
+    local start_vec = {finder.x, finder.y}
+    local start_key = vectoindex(start_vec)
+    local costs, prev
+    if finder.enemy_ai == ENEMY_AI.CHARGE then
+        costs, prev = dijkstra(start_key, filter_func)
+    elseif finder.enemy_ai == ENEMY_AI.RANGE then
+        costs, prev = find_traversable_tiles(start_vec, finder.Mov, filter_func)
+    elseif finder.enemy_ai == ENEMY_AI.RANGE_2 then
+        costs, prev = find_traversable_tiles(start_vec, finder.Mov * 2, filter_func)
+    end
+    
 
     -- 3. Find intersection and sort using your insert
     local potential = {} -- Returns array of {{key,cost},...} sorted by cost desc
@@ -172,9 +179,10 @@ function find_optimal_attack_path(finder, units, castles, filter_func)
     end
 
     -- 4. Reconstruct path
-    local path = reconstruct_path(prev, potential[#potential][1])
-
-    return path  
+    if #potential >= 1 then
+        return reconstruct_path(prev, potential[#potential][1])
+    end
+    return nil  
 end
 
 function trim_path_tail_if_occupied(path, units)
