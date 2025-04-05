@@ -12,15 +12,13 @@ TERRAIN_COSTS = {
 
 -- Terrain Effects on Hit Rate
 TERRAIN_EFFECTS = {
-    [1] = 0,   -- Plains: no effect
-    [3] = 20, -- Forest: -10% hit rate
-    [4] = 30, -- Thicket: -15% hit rate
-    [2] = 10,  -- Shoal: -5% hit rate
-    [5] = 5,  -- Sand: -5% hit rate
-    [6] = 20, -- Sea: -20% hit rate (unlikely to attack from here)
-    [7] = 20, -- Mountain: -20% hit rate (unlikely to attack from here)
-    [8] = 0,   -- Player Castle: no effect
-    [9] = 0    -- Enemy Castle: no effect
+    [1] = 0,   -- Plains
+    [3] = 20, -- Forest
+    [4] = 30, -- Thicket
+    [2] = 10,  -- Shoal
+    [5] = 5,  -- Sand
+    [6] = 20, -- Sea
+    [7] = 20, -- Mountain
 }
 
 LAYERS = {

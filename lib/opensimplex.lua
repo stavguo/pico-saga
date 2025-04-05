@@ -1,101 +1,4 @@
--- opensimplex simple mapgen v2.0
--- 2024 felice, incorporating code by kurt spencer
 
---------------------------------
--- unlicense: i'll follow the
--- original authors 'unlicense'
--- which basically puts the code
--- in the public domain.
--- see https://gist.github.com/kdotjpg/b1270127455a94ac5d19#file-unlicense
---------------------------------
-
--- see compute_image() for
--- actual example usage code.
-
--- opensimplex noise, pico-8 version
-
-------- pico-8 changelog -------
---
--- adapted by felice enellen
--- from public domain code found
--- here:
--- https://gist.github.com/kdotjpg/b1270127455a94ac5d19
-
--- v2.0
--- - can create multiple noise
---   generators in parallel
--- - can set a bit range for x,y
--- - inlined all foldable const
---   expressions (see "magic
---   numbers" for details)
---
--- v1.2
--- - ported to pico-8 lua
---
------- original changelog ------
---
--- opensimplex noise in java.
--- by kurt spencer
---
--- v1.1 (october 5, 2014)
--- - added 2d and 4d implementations.
--- - proper gradient sets for all dimensions, from a
---   dimensionally-generalizable scheme with an actual
---   rhyme and reason behind it.
--- - removed default permutation array in favor of
---   default seed.
--- - changed seed-based constructor to be independent
---   of any particular randomization library, so results
---   will be the same when ported to other languages.
---
---------------------------------
-
---------------------------------
--- magic numbers:
---
--- in the code below, you will
--- find some magic numbers with
--- comments next to them that
--- correspond to entries here.
---
--- these numbers have been
--- derived and inlined from
--- constants and foldable
--- expressions in kurt's
--- original code, for the sake
--- of performance.
---
--- sources for the numbers:
---
--- stretch constant:
---  = (1/sqrt(2+1)-1)/2
---  = -0.211324865405187
---
--- squish constant:
---  = (sqrt(2+1)-1)/2
---  = 0.366025403784439
---
--- squish constant + 1
---  = 1.366025403784439
---
--- squish constant * 2
---  = 0.73205080756887729
---
--- squish constant * 2 + 1
---  = 1.73205080756887729
---
--- squish constant * 2 + 2
---  = 2.73205080756887729
---
--- 2d norm constant
---  = ? kurt's code doesn't say
---  = 47
---------------------------------
-
--- gradients for 2d. they
--- approximate the directions to
--- the vertices of an octagon
--- from the center
 local _os2d_grd =
 {
     [0] = -- (start at index 0)
@@ -118,26 +21,6 @@ local _os2d_grd =
     -5,
 }
 
--- os2d_noisefn()
---
--- initializes a generator using
--- a permutation array generated
--- from a random seed.
---
--- usage:
---
---   -- create two generators
---   noise1=os2d_noise_fn(123)
---   noise2=os2d_noise_fn(456)
---
---   -- get samples from them
---   sample1=noise1(x1,y1)
---   sample2=noise2(x2,y2)
---
---   -- mix and match
---   sample=noise1(x1,y1)*0.67
---         +noise2(x1,y1)*0.33
---
 function os2d_noisefn(seed, width)
     -- default to 256x256 area
     width = width or 256
@@ -312,10 +195,3 @@ function os2d_noisefn(seed, width)
         return val / 47 -- 2d norm constant
     end
 end
-
--- note kurt's original code had
--- an extrapolate() function
--- here, which was called in
--- four places in eval(), but i
--- found inlining it to produce
--- good performance benefits.

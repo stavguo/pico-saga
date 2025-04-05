@@ -89,24 +89,24 @@ function get_castle_offset(quadrant, size)
     -- For even-sized squares, bias based on quadrant
     local half = size / 2
 
-    if quadrant == 1 then  -- Top-left quadrant
-        return half - 1, half - 1  -- Bias towards top-left
-    elseif quadrant == 2 then  -- Top-right quadrant
-        return half, half - 1  -- Bias towards top-right
-    elseif quadrant == 3 then  -- Bottom-left quadrant
-        return half - 1, half  -- Bias towards bottom-left
-    else  -- Bottom-right quadrant
-        return half, half  -- Bias towards bottom-right
+    if quadrant == 1 then
+        return half - 1, half - 1
+    elseif quadrant == 2 then
+        return half, half - 1
+    elseif quadrant == 3 then
+        return half - 1, half
+    else
+        return half, half
     end
 end
 
 -- Find the best spots for castles in each quadrant
 function find_castle_spots()
     local quadrants = {
-        { x_start = 0, x_end = 15, y_start = 0, y_end = 15 },  -- Q1: explicitly 0,0 to 15,15
-        { x_start = 16, x_end = 31, y_start = 0, y_end = 15 },  -- Q2: explicitly 16,0 to 31,15
-        { x_start = 0, x_end = 15, y_start = 16, y_end = 31 },  -- Q3: explicitly 0,16 to 15,31
-        { x_start = 16, x_end = 31, y_start = 16, y_end = 31 }  -- Q4: explicitly 16,16 to 31,31
+        { x_start = 0, x_end = 15, y_start = 0, y_end = 15 },
+        { x_start = 16, x_end = 31, y_start = 0, y_end = 15 },
+        { x_start = 0, x_end = 15, y_start = 16, y_end = 31 },
+        { x_start = 16, x_end = 31, y_start = 16, y_end = 31 }
     }
 
     local best_spots = {}

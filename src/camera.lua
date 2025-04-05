@@ -27,14 +27,6 @@ function draw_cursor(cursor, flashing)
     end
 end
 
-function draw_cursor_coords(cursor)
-    local offset = 8
-    local x, y, text = offset + peek2(0x5f28), offset + peek2(0x5f2a), "x:" .. cursor[1] .. " y:" .. cursor[2]
-    rectfill(x - 1, y - 1, x + #text * 4, y + 4, 0)
-    color(7)
-    print(text, x, y)
-end
-
 function enter_castle(cursor)
     -- Store the cursor's screen position before moving the camera
     local csx, csy = cursor[1] - (peek2(0x5f28) \ 8), cursor[2] - (peek2(0x5f2a) \ 8)

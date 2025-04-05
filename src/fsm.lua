@@ -103,7 +103,6 @@ fsm.states.overworld = setmetatable({
             return not unit.in_castle
         end)
         draw_cursor(fsm.cursor, true)
-        draw_cursor_coords(fsm.cursor)
     end,
     exit = function() end
 }, { __index = base_state })
@@ -135,7 +134,6 @@ fsm.states.castle = setmetatable({
             return unit.in_castle
         end)
         draw_cursor(fsm.cursor, true)
-        draw_cursor_coords(fsm.cursor)
     end,
     exit = function() end
 }, { __index = base_state })
@@ -144,10 +142,8 @@ fsm.states.unit_info = setmetatable({
     traversable_tiles,
     enter = function()
         create_ui({
-            fsm.selected_unit.team.." "..fsm.selected_unit.class
-        }, fsm.ui, false)
-        create_ui({
-            "HP: " .. fsm.selected_unit.HP .. " Mov: " .. fsm.selected_unit.Mov,
+            fsm.selected_unit.team.." "..fsm.selected_unit.class,
+            "HP:" .. fsm.selected_unit.HP .. " Mov:" .. fsm.selected_unit.Mov,
             (fsm.selected_unit.team == "enemy" and "AI: "..fsm.selected_unit.enemy_ai or nil)
         }, fsm.ui, false)
         if not fsm.selected_castle then
@@ -160,8 +156,8 @@ fsm.states.unit_info = setmetatable({
     end,
     update = function()
         if btnp(0) or btnp(1) or btnp(2) or btnp(3) then
-            if (fsm.selected_unit.team == "player") then
-                fsm:change_state("move_unit")
+            if fsm.selected_unit.team == "player" then
+                if not fsm.selected_unit.exhausted then fsm:change_state("move_unit") end
             else
                 update_cursor(fsm.cursor, 31, 31)
                 update_camera(fsm.cursor)
@@ -228,7 +224,7 @@ fsm.states.move_unit = setmetatable({
         -- Select tile to move to
         if btnp(4) then -- "Select" button
             local unit_at_tile = get_unit_at(fsm.cursor, fsm.units, false)
-            if not unit_at_tile or unit_at_tile == fsm.selected_unit then
+            if mget(fsm.cursor[1], fsm.cursor[2]) < 6 and not unit_at_tile or unit_at_tile == fsm.selected_unit then
                 fsm:change_state("action_menu")
             end
         elseif btnp(5) then -- "Back" button
@@ -239,7 +235,6 @@ fsm.states.move_unit = setmetatable({
         draw_traversable_edges(traversable_tiles, 7)
         draw_nonselected_overworld_units(fsm.selected_unit, fsm.units)
         draw_unit_at(fsm.selected_unit, fsm.cursor[1], fsm.cursor[2], true)
-        draw_cursor_coords(fsm.cursor)
     end,
     exit = function() end
 }, { __index = base_state })
@@ -319,6 +314,24 @@ fsm.states.attack_menu = setmetatable({
         update_cursor(fsm.cursor, 31, 31)
         update_camera(fsm.cursor)
 
+        fsm.ui = {}
+        local top = (fsm.cursor[2] - (peek2(0x5f2a) \ 8)) < 8
+        local above_unit = get_unit_at(fsm.cursor, fsm.units, false)
+        if above_unit and above_unit.team == "enemy" then
+            create_ui({
+                fsm.selected_unit.team.." "..fsm.selected_unit.class,
+                "HP:"..fsm.selected_unit.HP,
+                "Dmg:"..calculate_damage(fsm.selected_unit, above_unit),
+                "Hit:"..hit_chance(fsm.selected_unit, above_unit).."%"
+            }, fsm.ui, false, top and "bl" or "tl")
+            create_ui({
+                above_unit.team.." "..above_unit.class,
+                "HP:"..above_unit.HP,
+                "Dmg:"..calculate_damage(above_unit, fsm.selected_unit),
+                "Hit:"..hit_chance(above_unit, {x=initial_cursor[1], y=initial_cursor[2], Spd=fsm.selected_unit.Spd}).."%"
+            }, fsm.ui, false, top and "br" or "tr")
+        end
+
         -- Handle the select button press
         if btnp(4) then  -- Select button
             local key = vectoindex(fsm.cursor) -- Convert cursor position to "x,y"
@@ -350,8 +363,11 @@ fsm.states.attack_menu = setmetatable({
         end, true)
         draw_unit_at(fsm.selected_unit, initial_cursor[1], initial_cursor[2])
         draw_cursor(fsm.cursor, true)
+        draw_ui(fsm.cursor, fsm.ui)
     end,
-    exit = function() end
+    exit = function()
+        fsm.ui = {}
+    end
 }, { __index = base_state })
 
 fsm.states.combat = setmetatable({
