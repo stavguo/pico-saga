@@ -12,7 +12,7 @@ function find_traversable_tiles(start, movement, filter_func)
         local neighbors = get_neighbors(current)
         for _, n in pairs(neighbors) do
             local key = vectoindex(n)
-            local cost = TERRAIN_COSTS[mget(n[1], n[2])]
+            local cost = TERRAIN_COSTS[mget(n[1], n[2])] or nil
             if cost then
                 local new_cost = costs[vectoindex(current)] + cost
                 if new_cost <= movement and (not costs[key] or new_cost < costs[key]) then
@@ -91,7 +91,7 @@ function dijkstra(start_key, filter_func)
         local neighbors = get_neighbors(current_pos, filter_func)
         for neighbor_pos in all(neighbors) do
             local neighbor_key = vectoindex(neighbor_pos)
-            local terrain_cost = TERRAIN_COSTS[mget(neighbor_pos[1], neighbor_pos[2])] or 0
+            local terrain_cost = TERRAIN_COSTS[mget(neighbor_pos[1], neighbor_pos[2])] or nil
 
             -- Skip if terrain is impassable or cost is undefined
             if not terrain_cost then goto next_neighbor end
@@ -192,7 +192,7 @@ function trim_path_tail_by_costs(path, mov)
     local r,p=mov,{}
     for i=1,#path do
         local v=indextovec(path[i])
-        local c=TERRAIN_COSTS[mget(v[1],v[2])]or 0
+        local c=TERRAIN_COSTS[mget(v[1],v[2])] or 0
         if r<c then break end
         add(p,path[i])
         r-=c

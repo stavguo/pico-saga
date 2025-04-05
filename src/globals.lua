@@ -3,11 +3,7 @@ TERRAIN_COSTS = {
     [3] = 2 , -- FOREST
     [4] = 4 , -- THICKET
     [2] = 4 , -- SHOAL
-    [6] = nil , -- SEA(impassable)
     [5] = 2 , -- SAND
-    [7] = nil, -- MOUNTAIN(impassable)
-    [8] = nil, -- PLAYER CASTLE
-    [9] = nil -- ENEMY CASTLE
 }
 
 -- Terrain Effects on Hit Rate
@@ -126,9 +122,5 @@ function heuristic(a, b)
 end
 
 function hcenter(s)
-    -- screen center minus the
-    -- string length times the 
-    -- pixels in a char's width,
-    -- cut in half
     return 64-#s*2
 end
