@@ -26,49 +26,6 @@ function find_traversable_tiles(start, movement, filter_func)
     return costs, prev
 end
 
--- A* algorithm implementation that trims path based on unit movement
-function a_star(start, goal, filter_func)
-    costs = {}
-    prev = {}
-    frontier = {}
-    found_goal = false
-
-    costs[start] = 0
-    insert(frontier, start, 0)
-
-    while #frontier > 0 do
-        current = popEnd(frontier)
-
-        if current == goal then
-            found_goal = true
-            break
-        end
-
-        local neighbours = get_neighbors(indextovec(current), filter_func)
-        for next in all(neighbours) do
-            local nextIndex = vectoindex(next)
-            
-            -- Calculate movement cost based on terrain
-            local tile = mget(next[1], next[2])
-            local terrain_cost = TERRAIN_COSTS[tile] or 0 -- Default to 0 if tile is not in TERRAIN_COSTS
-            local new_cost = costs[current] + terrain_cost
-
-            if costs[nextIndex] == nil or new_cost < costs[nextIndex] then
-                costs[nextIndex] = new_cost
-                prev[nextIndex] = current
-                local priority = new_cost + heuristic(indextovec(goal), next)
-                insert(frontier, nextIndex, priority)
-            end 
-        end
-    end
-
-    if found_goal then
-        return costs, prev
-    else
-        return nil -- Return nil if no path is found
-    end
-end
-
 function dijkstra(start_key, filter_func)
     -- Initialize data structures
     local costs = {}       -- costs[key] = cost to reach tile

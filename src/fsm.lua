@@ -83,6 +83,8 @@ fsm.states.overworld = setmetatable({
         if btnp(5) then
             fsm.phase = "enemy"
             fsm:change_state("phase_change")
+            -- fsm.phase = "stage_clear"
+            -- fsm:change_state("game_over")
         end
 
         -- Select castle or unit
@@ -621,4 +623,34 @@ fsm.states.phase_change = setmetatable({
         )
     end,
     exit = function() end
+}, { __index = base_state })
+
+fsm.states.game_over = setmetatable({
+    go_text, reset_text,
+    enter = function()
+        go_text = fsm.phase == "game_over" and "game over" or "stage clear"
+        reset_text = "PRESS ANY BUTTON TO RESET"
+    end,
+    update = function()
+        if btnp(0) or btnp(1) or btnp(2) or btnp(3) or btnp(4) or btnp(5) then
+            fsm:change_state("setup")
+        end
+    end,
+    draw = function()
+        draw_units(fsm.units, function (unit)
+            return not unit.in_castle
+        end)
+        draw_centered_text(go_text, fsm.phase == "game_over" and 8 or 12)
+        draw_centered_text(reset_text, 7, 67)
+    end,
+    exit = function()
+        reset()
+        fsm.castles = {}
+        fsm.units = {}
+        fsm.ui = {}
+        fsm.selected_unit = nil
+        fsm.selected_castle = nil
+        fsm.phase = "player"
+        camera(0, 0)
+    end
 }, { __index = base_state })
