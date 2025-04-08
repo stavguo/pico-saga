@@ -128,21 +128,13 @@ end
 function init_castles(castles)
     local cursor
     local spots = find_castle_spots()
+    local player = flr(rnd(4)) + 1
     for i, spot in ipairs(spots) do
-        -- Get biased offset based on quadrant
         local offset_x, offset_y = get_castle_offset(spot.quadrant, spot.size)
-
-        local x = spot.x + offset_x
-        local y = spot.y + offset_y
-        mset(x, y, i == 1 and 8 or 9)
-
-        -- Initialize cursor for the player's castle
-        if i == 1 then
-            cursor = { x, y }
-            add(castles, {x = x, y = y, team = "player"})
-        else
-            add(castles, {x = x, y = y, team = "enemy"})
-        end
+        local x, y = spot.x + offset_x, spot.y + offset_y
+        if (i == player) cursor = { x, y }
+        castles[vectoindex({ x, y })] = i == player and "player" or "enemy"
+        mset(x, y, i == player and 8 or 9)
     end
     return cursor
 end
@@ -164,18 +156,16 @@ function draw_castle_interior()
     end
 end
 
-function flip_castles(pos, castles)
-    adj_tiles = get_neighbors(pos)
-    for _, tile in ipairs(adj_tiles) do
-        for i, castle in ipairs(castles) do
-            if castle.x == tile[1] and castle.y == tile[2] then
-                if mget(castle.x, castle.y) == 8 then
-                    castle.team = "enemy"
-                elseif mget(castle.x, castle.y) == 9 then
-                    castle.team = "player"
-                end
-                mset(castle.x, castle.y, castle.team == "player" and 8 or 9)
-            end
-        end
-    end
+function check_for_castle(t_idx, is_enemy_turn)
+    local pos = indextovec(t_idx)
+    local adj_tiles = get_neighbors(pos, function (pos)
+        return mget(pos[1], pos[2]) == (is_enemy_turn and 8 or 9)
+    end)
+    return #adj_tiles > 0 and vectoindex(adj_tiles[1]) or nil
+end
+
+function flip_castle(c_idx, castles)
+    local pos, current = indextovec(c_idx), castles[c_idx]
+    castles[c_idx] = current == "player" and "enemy" or "player"
+    mset(pos[1], pos[2], current == "player" and 9 or 8)
 end

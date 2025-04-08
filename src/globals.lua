@@ -47,12 +47,6 @@ WEAPON_TRIANGLE = {
     ["Monk"] = {"Archer", "Mage", "Thief"}
 }
 
-ENEMY_AI = {
-    CHARGE = "CHARGE",
-    RANGE = "RANGE",
-    RANGE_2 = "RANGE_2"
-}
-
 function SHUFFLE(items)
     for i = #items, 2, -1 do
         local j = flr(rnd(i)) + 1
@@ -85,13 +79,6 @@ function insert(t, val, p)
     else
         add(t, {val, p}) 
     end
-end
-
--- pop the last element off a table
-function popEnd(t)
-    local top = t[#t]
-    del(t,t[#t])
-    return top[1]
 end
 
 function reverse(t)

@@ -96,30 +96,15 @@ function init_player_units(units)
     end
 end
 
-function init_enemy_units(units, castles, movement_distance)
-    local enemy_classes = {
-        "Sword", "Sword", "Sword", "Sword",
-        "Lance", "Lance", "Lance", "Lance",
-        "Axe", "Axe", "Axe", "Axe"
-    }
-    SHUFFLE(enemy_classes)
-    local enemy_ai_options = {
-        ENEMY_AI.CHARGE, ENEMY_AI.CHARGE, ENEMY_AI.CHARGE, ENEMY_AI.CHARGE,
-        ENEMY_AI.RANGE, ENEMY_AI.RANGE, ENEMY_AI.RANGE, ENEMY_AI.RANGE,
-        ENEMY_AI.RANGE_2, ENEMY_AI.RANGE_2, ENEMY_AI.RANGE_2, ENEMY_AI.RANGE_2
-    }
-    SHUFFLE(enemy_ai_options)
-
-    local counter = 1
+function init_enemy_units(units, castles)
     -- Loop through each castle
-    for castle_idx, castle in pairs(castles) do
-        if castle.team == "enemy" then  -- Only place units around enemy castles
+    for castle_idx, castle_type in pairs(castles) do
+        if castle_type == "enemy" then  -- Only place units around enemy castles
             -- Find traversable tiles around the castle within the specified movement distance
-            local start = {castle.x, castle.y}
-            local traversable_tiles = find_traversable_tiles(start, movement_distance)
+            local pos = indextovec(castle_idx)
+            local traversable_tiles = find_traversable_tiles(pos, 4)
             local filtered_tiles = {}
-            for k, v in pairs(traversable_tiles) do
-                -- add(filtered_tiles, k)
+            for k, _ in pairs(traversable_tiles) do
                 local pos = indextovec(k)
                 local unit = get_unit_at(pos, units)
                 local terrain = mget(pos[1], pos[2])
@@ -132,18 +117,22 @@ function init_enemy_units(units, castles, movement_distance)
             SHUFFLE(filtered_tiles)
 
             -- Calculate the number of units to place around this castle
-            local num_units = flr(#enemy_classes / 3)
-            for i = 1, num_units do
-                if counter > #enemy_classes then break end
+            for i = 1, 4 do
 
                 -- Get a random tile from the shuffled list
-                if #filtered_tiles > 0 then
+                if i <= #filtered_tiles then
                     local tileIdx = filtered_tiles[i]
                     local pos = indextovec(tileIdx)
 
                     -- Create the unit at the selected position
-                    units[tileIdx] = create_unit(pos[1], pos[2], enemy_classes[counter], "enemy", false, enemy_ai_options[counter], castle_idx)
-                    counter = counter + 1
+                    units[tileIdx] = create_unit(
+                        pos[1],
+                        pos[2],
+                        ({'Sword','Lance','Axe'})[flr(rnd(3))+1],
+                        "enemy",
+                        false,
+                        ({"Charge","Range","Range2"})[flr(rnd(3))+1],
+                        castle_idx)
                 end
             end
         end
@@ -280,28 +269,24 @@ end
 
 function sort_enemy_turn_order(units, castles)
     local enemies = {}
-    -- First create separate lists for each castle
     local castle_lists = {}
-    for i=1,4 do castle_lists[i] = {} end
+    for k,_ in pairs(castles) do
+        castle_lists[k] = {}
+    end
 
-    -- Insert each unit into its castle's list, sorted by distance
     for _,u in pairs(units) do
         if u.team == "enemy" and not u.exhausted then
             local max_dist = 0
-            for castle in all(castles) do
-                max_dist = max(max_dist, heuristic({castle.x,castle.y},{u.x,u.y}))
+            for k,v in pairs(castles) do
+                max_dist = max(max_dist, heuristic(indextovec(k),{u.x,u.y}))
             end
-            -- Insert into the appropriate castle's list
             insert(castle_lists[u.castle_idx], u, max_dist)
         end
     end
 
-    -- Now combine all lists in castle order (1-4)
-    for castle_num=1,4 do
-        -- Since your insert maintains ascending order, we'll need to reverse each list
-        reverse(castle_lists[castle_num])
-        -- Now add all units from this castle to the final array
-        for item in all(castle_lists[castle_num]) do
+    for castle_idx, _ in pairs(castle_lists) do
+        reverse(castle_lists[castle_idx])
+        for item in all(castle_lists[castle_idx]) do
             add(enemies, item) -- item[1] is the unit, item[2] is the distance
         end
     end

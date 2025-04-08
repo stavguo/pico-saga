@@ -57,7 +57,7 @@ fsm.states.setup = setmetatable({
         init_terrain(noise_fn, tree_fn)
         fsm.cursor = init_castles(fsm.castles)
         init_player_units(fsm.units)
-        init_enemy_units(fsm.units, fsm.castles, 4)
+        init_enemy_units(fsm.units, fsm.castles)
 
         fsm.phase = "player"
         fsm:change_state("phase_change")
@@ -242,6 +242,7 @@ fsm.states.move_unit = setmetatable({
 
 fsm.states.action_menu = setmetatable({
     enemy_positions,
+    c_idx,
     enter = function()
         enemy_positions = {}
         local tiles = get_tiles_within_distance(fsm.cursor, fsm.selected_unit.Atr)
@@ -251,19 +252,16 @@ fsm.states.action_menu = setmetatable({
                 add(enemy_positions, tile)
             end
         end
-        local adj_tiles = get_neighbors({fsm.cursor[1], fsm.cursor[2]}, function (pos)
-            return mget(pos[1], pos[2]) == 9
-        end)
-        local capturable = next(adj_tiles) ~= nil
+        c_idx = check_for_castle(vectoindex(fsm.cursor))
         if next(enemy_positions) ~= nil then
             create_ui({
                 "Attack",
                 -- "Item",
-                (capturable and "Capture" or "Standby")}, fsm.ui, true)
+                (c_idx and "Capture" or "Standby")}, fsm.ui, true)
         else
             create_ui({
                 -- "Item",
-                (capturable and "Capture" or "Standby")}, fsm.ui, true)
+                (c_idx and "Capture" or "Standby")}, fsm.ui, true)
         end
     end,
     update = function()
@@ -278,7 +276,7 @@ fsm.states.action_menu = setmetatable({
                 move_unit(fsm.selected_unit, fsm.units, fsm.cursor)
                 fsm.selected_unit.exhausted = true
                 if selected_item == "Capture" then
-                    flip_castles({fsm.cursor[1], fsm.cursor[2]}, fsm.castles)
+                    flip_castle(c_idx, fsm.castles)
                 end
                 fsm:change_state("overworld")
             end
@@ -480,6 +478,8 @@ fsm.states.enemy_turn = setmetatable({
 
             -- Transition to next state
             if #player_units == 0 then
+                local c_idx = check_for_castle(vectoindex(fsm.cursor), true)
+                if (c_idx ~= nil) flip_castle(c_idx, fsm.castles)
                 enemy.exhausted = true
                 fsm:change_state("enemy_phase")
             else
