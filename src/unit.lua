@@ -22,7 +22,7 @@ function create_unit(x, y, class, team, in_castle, enemy_ai, castle_idx)
 end
 
 function get_unit_at(cursor, units, in_castle)
-    local unit = units[vectoindex(cursor)]
+    local unit = units[cursor]
     if unit then
         if in_castle == nil and not unit.in_castle then
             return unit
@@ -35,38 +35,31 @@ function get_unit_at(cursor, units, in_castle)
     return nil
 end
 
-function move_unit(unit, units, cursor)
-    -- Remove old position from units
-    local old_key = vectoindex({unit.x, unit.y})
-    if (units[old_key]) units[old_key] = nil
-    
-    -- Update position
-    unit.x, unit.y = cursor[1], cursor[2]
-    if (unit.in_castle) unit.in_castle = false
-    
-    -- Add new position
-    local new_key = vectoindex({unit.x, unit.y})
-    units[new_key] = unit
+function move_unit(u, old_idx, new_idx)
+    if castles[old_idx] then
+        castles[old_idx].units[vectoindex({u.x,u.y})]=nil
+    else
+        units[vectoindex({u.x,u.y})]=nil
+    end
+    u.x,u.y=unpack(indextovec(new_idx))
+    units[new_idx]=u
 end
 
-function get_neighbors(pos, filter_func)
-    local neighbors = {}
-    local directions = {
-        {-1, 0}, {1, 0},
-        {0, -1}, {0, 1}
-    }
-    for _, dir in ipairs(directions) do
-        local nx, ny = pos[1] + dir[1], pos[2] + dir[2]
-        if nx >= 0 and nx < 32 and ny >= 0 and ny < 32 then
-            if filter_func == nil or filter_func({nx, ny}) then
-                add(neighbors, {nx, ny})
-            end
+function get_neighbors(t,f)
+    local v=indextovec(t)
+    local n={}
+    local d={{-1,0},{1,0},{0,-1},{0,1}}
+
+    for i=1,#d do
+        local x,y=v[1]+d[i][1],v[2]+d[i][2]
+        if x>=0 and x<32 and y>=0 and y<32 then
+            local ni=vectoindex({x,y})
+            if not f or f(ni) then add(n,ni) end
         end
     end
-    if (pos[1] + pos[2]) % 2 == 0 then
-        reverse(neighbors)
-    end
-    return neighbors
+
+    if t%2>0 then reverse(n) end
+    return n
 end
 
 function init_player_units(units)
@@ -96,19 +89,14 @@ function init_player_units(units)
     end
 end
 
-function init_enemy_units(units, castles)
-    -- Loop through each castle
-    for castle_idx, castle_type in pairs(castles) do
-        if castle_type == "enemy" then  -- Only place units around enemy castles
+function init_enemy_units(castles, units)
+    for castle_idx, castle in pairs(castles) do
+        if castle.team == "enemy" then  -- Only place units around enemy castles
             -- Find traversable tiles around the castle within the specified movement distance
-            local pos = indextovec(castle_idx)
-            local traversable_tiles = find_traversable_tiles(pos, 4)
+            local traversable_tiles = find_traversable_tiles(castle_idx, 4)
             local filtered_tiles = {}
             for k, _ in pairs(traversable_tiles) do
-                local pos = indextovec(k)
-                local unit = get_unit_at(pos, units)
-                local terrain = mget(pos[1], pos[2])
-                if unit == nil and terrain == 1 then
+                if map_get(k) == 1 then
                     add(filtered_tiles, k)
                 end
             end
@@ -139,21 +127,8 @@ function init_enemy_units(units, castles)
     end
 end
 
--- Convert bfs output (list of {x, y} coordinates) to a list of units
-function get_attackable_units(bfs_output, units, team)
-    local attackable_units = {}
-    for _, pos in ipairs(bfs_output) do
-        local key = vectoindex(pos)  -- Convert {x, y} to "x,y"
-        local unit = units[key]        -- Look up the unit in ENEMY_UNITS
-        if unit and unit.team == team then
-            attackable_units[key] = unit      -- Add the unit to the list
-        end
-    end
-    return attackable_units
-end
-
-function get_tiles_within_distance(start, max_distance, filter_func)
-    local result = {}
+function get_tiles_within_distance(tile_idx, max_distance, filter_func)
+    local result, start = {}, indextovec(tile_idx)
     for x = start[1] - max_distance, start[1] + max_distance do
         for y = start[2] - max_distance, start[2] + max_distance do
             -- Check if the tile is within bounds (0,0 to 31,31)
@@ -161,9 +136,10 @@ function get_tiles_within_distance(start, max_distance, filter_func)
                 -- Calculate Manhattan distance
                 local distance = abs(x - start[1]) + abs(y - start[2])
                 -- Add to result if within max_distance
-                if distance > 0 and distance <= max_distance then
-                    if filter_func == nil or filter_func({x, y}) then
-                        add(result, {x, y})
+                if distance <= max_distance then
+                    local current = vectoindex({x, y})
+                    if filter_func == nil or filter_func(current) then
+                        add(result, current)
                     end
                 end
             end
@@ -177,11 +153,11 @@ function find_enemy(x, y, units)
     return units[key] ~= nil and units[key].team == "enemy"
 end
 
-function hit_chance(attacker, defender)
-    local terrain = mget(defender.x, defender.y)
+function hit_chance(att_skl, def_spd, def_idx)
+    local terrain = map_get(def_idx)
     local terrain_effect = TERRAIN_EFFECTS[terrain] or 0
     local base_hit_rate = 80  -- Example base hit rate
-    local accuracy = base_hit_rate + (attacker.Skl) - (defender.Spd + terrain_effect)
+    local accuracy = base_hit_rate + (att_skl) - (def_spd + terrain_effect)
     return mid(0, accuracy, 100)  -- Clamp between 0% and 100%
 end
 
@@ -194,8 +170,8 @@ function calculate_damage(attacker, defender)
     return max(1, damage)  -- Ensure at least 1 damage
 end
 
-function will_hit(attacker, defender)
-    return flr(rnd(100)) < hit_chance(attacker, defender)
+function will_hit(att_skl, def_spd, def_idx)
+    return flr(rnd(100)) < hit_chance(att_skl, def_spd, def_idx)
 end
 
 function is_attacker_advantage(attacker, defender)
@@ -213,15 +189,15 @@ end
 function draw_units(units, filter, flashing)
     for _, unit in pairs(units) do
         if not filter or filter(unit) then
-            draw_unit_at(unit, nil, nil, flashing)
+            draw_unit_at(unit, nil, flashing)
         end
     end
 end
 
-function draw_unit_at(unit, x, y, flashing)
+function draw_unit_at(unit, map_idx, flashing)
     -- Default to unit's position if x and y are not provided
-    x = x or unit.x
-    y = y or unit.y
+    local pos = map_idx and indextovec(map_idx) or nil
+    local x, y = pos ~= nil and pos[1] or unit.x, pos ~= nil and pos[2] or unit.y
 
     -- Only draw if flashing is false or the flashing condition is met
     if not flashing or t() % 0.5 < 0.4 then
@@ -251,20 +227,22 @@ function draw_unit_at(unit, x, y, flashing)
     end
 end
 
-function draw_nonselected_overworld_units(selected, units)
+function draw_nonselected_overworld_units(selected)
     draw_units(units, function (unit)
-        return unit ~= selected and not unit.in_castle
+        return unit ~= selected
     end)
 end
 
-function is_phase_over(team, units)
-    local actionable = false
+function is_phase_over(team)
     for _, unit in pairs(units) do
-        if unit.team == team and not unit.exhausted then
-            actionable = true
+        printh(team, "logs/debug.txt")
+        printh(unit.exhausted, "logs/debug.txt")
+        if unit.team == team and unit.exhausted == false then
+            printh("should be returning false", "logs/debug.txt")
+            return false
         end
     end
-    return not actionable
+    return true
 end
 
 function sort_enemy_turn_order(units, castles)

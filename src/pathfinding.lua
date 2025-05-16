@@ -1,24 +1,18 @@
 -- Uniform cost search implementation that limits search range based on unit movement
 function find_traversable_tiles(start, movement, filter_func)
-    local frontier = {{start[1], start[2]}}
-    local prev = {}
-    local costs = {}
-
-    costs[vectoindex(start)] = 0
-
+    local frontier, prev, costs = {start}, {}, {}
+    costs[start] = 0
     while #frontier > 0 do
         local current = deli(frontier, 1)
-        local neighbors = get_neighbors(current)
-        for _, n in pairs(neighbors) do
-            local key = vectoindex(n)
-            local cost = TERRAIN_COSTS[mget(n[1], n[2])] or nil
+        local neighbors = get_neighbors(current, filter_func)
+        for key in all(neighbors) do
+            local cost = TERRAIN_COSTS[map_get(key)] or nil
             if cost then
-                local new_cost = costs[vectoindex(current)] + cost
-                if new_cost <= movement and (not costs[key] or new_cost < costs[key]) then
-                    if filter_func == nil or filter_func(n) then
-                        costs[key] = new_cost
-                        prev[key] = vectoindex(current)
-                        add(frontier, n)
+                local new_cost = costs[current] + cost
+                if not movement or new_cost <= movement then
+                    if not costs[key] or new_cost < costs[key] then
+                        costs[key], prev[key] = new_cost, current
+                        add(frontier, key)
                     end
                 end
             end
@@ -27,66 +21,40 @@ function find_traversable_tiles(start, movement, filter_func)
     return costs, prev
 end
 
-function dijkstra(start_key, filter_func)
-    local costs = {}
-    local prev = {}
-    local frontier = {start_key}
-    
-    costs[start_key] = 0
-
-    while #frontier > 0 do
-        local current_key = deli(frontier, 1)
-        local current_pos = indextovec(current_key)
-        local neighbors = get_neighbors(current_pos, filter_func)
-        for neighbor_pos in all(neighbors) do
-            local neighbor_key = vectoindex(neighbor_pos)
-            local terrain_cost = TERRAIN_COSTS[mget(neighbor_pos[1], neighbor_pos[2])] or nil
-            if terrain_cost then
-                local new_cost = costs[current_key] + terrain_cost
-                if not costs[neighbor_key] or new_cost < costs[neighbor_key] then
-                    costs[neighbor_key] = new_cost
-                    prev[neighbor_key] = current_key
-                    add(frontier, neighbor_key)
-                end
-            end
-        end
-    end
-    return costs, prev
-end
-
 function find_optimal_attack_path(finder, units, castles, filter_func)
+    printh("should def be find_optimal_attack_path", "logs/debug.txt")
     -- 1. Identify all attackable positions
     local attackable = {}
     
     -- Mark tiles adjacent to player units
     for _, unit in pairs(units) do
-        if unit.team == "player" and not unit.in_castle then
+        if unit.team == "player" then
             local range_tiles = get_tiles_within_distance(
-                {unit.x, unit.y},
+                vectoindex({unit.x, unit.y}),
                 finder.Atr,
                 function(pos)
                     local unit = get_unit_at(pos, units, false)
-                    return (unit == nil or unit == finder) and mget(pos[1], pos[2]) < 6
+                    return (unit == nil or unit == finder) and map_get(pos) < 6
                 end
             )
             for _, pos in ipairs(range_tiles) do
-                attackable[vectoindex(pos)] = true
+                attackable[pos] = true
             end
         end
     end
 
     -- Mark player castles
-    for castle_idx, castle_type in pairs(castles) do
-        if castle_type == "player" then
+    for castle_idx, castle in pairs(castles) do
+        if castle.team == "player" then
             local range_tiles = get_neighbors(
-                indextovec(castle_idx),
+                castle_idx,
                 function(pos)
                     local unit = get_unit_at(pos, units, false)
-                    return (unit == nil or unit == finder) and mget(pos[1], pos[2]) < 6
+                    return (unit == nil or unit == finder) and map_get(pos) < 6
                 end
             )
             for pos in all(range_tiles) do
-                attackable[vectoindex(pos)] = true
+                attackable[pos] = true
             end
         end
     end
@@ -102,12 +70,14 @@ function find_optimal_attack_path(finder, units, castles, filter_func)
     local start_vec = {finder.x, finder.y}
     local start_key = vectoindex(start_vec)
     local costs, prev
+    printh(finder.enemy_ai, "logs/debug.txt")
     if finder.enemy_ai == "Charge" then
-        costs, prev = dijkstra(start_key, filter_func)
+        printh("should def be charging", "logs/debug.txt")
+        costs, prev = find_traversable_tiles(start_key, nil, filter_func)
     elseif finder.enemy_ai == "Range" then
-        costs, prev = find_traversable_tiles(start_vec, finder.Mov, filter_func)
+        costs, prev = find_traversable_tiles(start_key, finder.Mov, filter_func)
     elseif finder.enemy_ai == "Range2" then
-        costs, prev = find_traversable_tiles(start_vec, finder.Mov * 2, filter_func)
+        costs, prev = find_traversable_tiles(start_key, finder.Mov * 2, filter_func)
     end
     
 
@@ -161,6 +131,7 @@ function reconstruct_path(prev, target_key)
 end
 
 function generate_full_path(start, goal)
+    start = indextovec(start)
     local path, dx, dy = {}, goal[1] - start[1], goal[2] - start[2]
     if abs(dx) > abs(dy) then
         for x = start[1], goal[1], dx > 0 and 1 or -1 do

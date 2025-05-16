@@ -126,14 +126,14 @@ function find_castle_spots()
 end
 
 function init_castles(castles)
-    local cursor
-    local spots = find_castle_spots()
+    local spots, cursor = find_castle_spots()
     local player = flr(rnd(4)) + 1
     for i, spot in ipairs(spots) do
         local offset_x, offset_y = get_castle_offset(spot.quadrant, spot.size)
         local x, y = spot.x + offset_x, spot.y + offset_y
-        if (i == player) cursor = { x, y }
-        castles[vectoindex({ x, y })] = i == player and "player" or "enemy"
+        local idx = vectoindex({ x, y })
+        if (i == player) cursor = idx
+        castles[idx] = { team = i == player and "player" or "enemy", units = {} }
         mset(x, y, i == player and 8 or 9)
     end
     return cursor
@@ -156,10 +156,14 @@ function draw_castle_interior()
     end
 end
 
-function check_for_castle(t_idx, is_enemy_turn)
+function map_get(t_idx)
     local pos = indextovec(t_idx)
-    local adj_tiles = get_neighbors(pos, function (pos)
-        return mget(pos[1], pos[2]) == (is_enemy_turn and 8 or 9)
+    return mget(pos[1], pos[2])
+end
+
+function check_for_castle(t_idx, is_enemy_turn)
+    local adj_tiles = get_neighbors(t_idx, function (idx)
+        return map_get(idx) == (is_enemy_turn and 8 or 9)
     end)
     return #adj_tiles > 0 and vectoindex(adj_tiles[1]) or nil
 end

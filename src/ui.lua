@@ -1,3 +1,12 @@
+function show_unit_info(unit, cursor)
+    local ui = {}
+    create_ui({
+        unit.team.." "..unit.class,
+        "HP:" .. unit.HP .. " Mov:" .. unit.Mov
+    }, ui)
+    draw_ui(cursor, ui)
+end
+
 function create_ui(options, ui, is_interactive, anchor)
     add(ui, {
         items = options,
@@ -32,7 +41,7 @@ function get_ui_selection(ui)
 end
 
 function get_anchor(cursor, count)
-    count = count or 1
+    count, cursor = count or 1, indextovec(cursor)
     local cx, cy = cursor[1] - (peek2(0x5f28) \ 8), cursor[2] - (peek2(0x5f2a) \ 8)
     local left, top = cx < 8, cy < 8
     return (count == 1 and (left and "tr" or "tl")) or
