@@ -21,20 +21,6 @@ function create_unit(x, y, class, team, in_castle, enemy_ai, castle_idx)
     }
 end
 
-function get_unit_at(cursor, units, in_castle)
-    local unit = units[cursor]
-    if unit then
-        if in_castle == nil and not unit.in_castle then
-            return unit
-        else
-            if unit.in_castle == in_castle then
-                return unit
-            end
-        end
-    end
-    return nil
-end
-
 function move_unit(u, old_idx, new_idx)
     if castles[old_idx] then
         castles[old_idx].units[vectoindex({u.x,u.y})]=nil
@@ -202,21 +188,15 @@ function draw_unit_at(unit, map_idx, flashing)
     -- Only draw if flashing is false or the flashing condition is met
     if not flashing or t() % 0.5 < 0.4 then
         -- Apply palette changes
-        if unit.exhausted then
-            if unit.team == "enemy" then
-                pal(12, 2)  -- Change palette for exhausted enemy units
-                pal(1, 2)
-                pal(10, 2)
-            else
-                pal(12, 1)  -- Change palette for exhausted player units
-                pal(1, 1)
-                pal(10, 1)
-            end
-        else
-            if unit.team == "enemy" then
-                pal(12, 8)  -- Change palette for normal enemy units
-                pal(1, 2)
-            end
+        if unit.exhausted and unit.team == "player" then
+            pal(12, 1)  -- Change palette for exhausted player units
+            pal(1, 1)
+            pal(10, 1)
+        end
+            
+        if unit.team == "enemy" then
+            pal(12, 8)  -- Change palette for normal enemy units
+            pal(1, 2)
         end
 
         -- Draw the unit's sprite at the specified position
@@ -245,29 +225,20 @@ function is_phase_over(team)
     return true
 end
 
-function sort_enemy_turn_order(units, castles)
-    local enemies = {}
-    local castle_lists = {}
-    for k,_ in pairs(castles) do
-        castle_lists[k] = {}
-    end
-
-    for _,u in pairs(units) do
-        if u.team == "enemy" and not u.exhausted then
-            local max_dist = 0
-            for k,v in pairs(castles) do
-                max_dist = max(max_dist, heuristic(indextovec(k),{u.x,u.y}))
-            end
-            insert(castle_lists[u.castle_idx], u, max_dist)
+function sort_enemy_turn_order(units)
+    local sorted_enemies = {}
+    
+    for _,unit in pairs(units) do
+        if unit.team == "enemy" and not unit.exhausted then
+            local priority = -(unit.y * 32 + unit.x)
+            insert(sorted_enemies, unit, priority)
         end
     end
-
-    for castle_idx, _ in pairs(castle_lists) do
-        reverse(castle_lists[castle_idx])
-        for item in all(castle_lists[castle_idx]) do
-            add(enemies, item) -- item[1] is the unit, item[2] is the distance
-        end
+    
+    local result = {}
+    for _,item in ipairs(sorted_enemies) do
+        add(result, item[1])
     end
-
-    return enemies
+    
+    return result
 end

@@ -22,8 +22,7 @@ function find_traversable_tiles(start, movement, filter_func)
 end
 
 function find_optimal_attack_path(finder, units, castles, filter_func)
-    printh("should def be find_optimal_attack_path", "logs/debug.txt")
-    -- 1. Identify all attackable positions
+    -- Identify all attackable positions
     local attackable = {}
     
     -- Mark tiles adjacent to player units
@@ -33,7 +32,7 @@ function find_optimal_attack_path(finder, units, castles, filter_func)
                 vectoindex({unit.x, unit.y}),
                 finder.Atr,
                 function(pos)
-                    local unit = get_unit_at(pos, units, false)
+                    local unit = units[pos]
                     return (unit == nil or unit == finder) and map_get(pos) < 6
                 end
             )
@@ -49,7 +48,7 @@ function find_optimal_attack_path(finder, units, castles, filter_func)
             local range_tiles = get_neighbors(
                 castle_idx,
                 function(pos)
-                    local unit = get_unit_at(pos, units, false)
+                    local unit = units[pos]
                     return (unit == nil or unit == finder) and map_get(pos) < 6
                 end
             )
@@ -59,26 +58,11 @@ function find_optimal_attack_path(finder, units, castles, filter_func)
         end
     end
 
-    local count = 0
-    for k, v in pairs(attackable) do
-        count = count + 1
-    end
-
     if next(attackable) == nil then return {} end
 
     -- 2. Perform pathfinding to find movement costs
-    local start_vec = {finder.x, finder.y}
-    local start_key = vectoindex(start_vec)
-    local costs, prev
-    printh(finder.enemy_ai, "logs/debug.txt")
-    if finder.enemy_ai == "Charge" then
-        printh("should def be charging", "logs/debug.txt")
-        costs, prev = find_traversable_tiles(start_key, nil, filter_func)
-    elseif finder.enemy_ai == "Range" then
-        costs, prev = find_traversable_tiles(start_key, finder.Mov, filter_func)
-    elseif finder.enemy_ai == "Range2" then
-        costs, prev = find_traversable_tiles(start_key, finder.Mov * 2, filter_func)
-    end
+    local start_key = vectoindex({finder.x, finder.y})
+    local costs, prev = find_traversable_tiles(start_key, nil, filter_func)
     
 
     -- 3. Find intersection and sort using your insert
@@ -98,10 +82,10 @@ end
 
 function trim_path_tail_if_occupied(path, units)
     for i=#path,1,-1 do
-        local point = indextovec(path[i])
-        if not get_unit_at(point, units) then
+        if not units[path[i]] then
             break
         end
+        printh("path was trimmed!", "logs/debug.txt")
         deli(path, i)
     end
     return path

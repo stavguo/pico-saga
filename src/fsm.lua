@@ -76,7 +76,7 @@ function create_overworld_state()
                 elseif unit then
                     selected_unit = unit
                     traversable_tiles = find_traversable_tiles(cursor, selected_unit.Mov, function (idx)
-                        local unit = get_unit_at(idx, units)
+                        local unit = units[idx]
                         return (unit == nil or unit.team == selected_unit.team) and map_get(idx) < 6
                     end)
                 end
@@ -197,7 +197,7 @@ function create_action_menu_state()
         enter = function(p)
             selected_unit, cursor, start, ui = p.unit, p.cursor, p.cursor, {}
             enemy_positions = get_tiles_within_distance(cursor, selected_unit.Atr, function (idx)
-                local unit = get_unit_at(idx, units, false)
+                local unit = units[idx]
                 return unit and unit.team == "enemy"
             end)
             c_idx=check_for_castle(cursor)
@@ -237,7 +237,7 @@ function create_attack_menu_state()
     local cursor, selected_unit, ui, start, attackable_units
     return {
         enter = function(p)
-            selected_unit, start, cursor, attackable_units = p.unit, p.start, p.start, {}
+            selected_unit, start, cursor, attackable_units, ui = p.unit, p.start, p.start, {}, {}
             for tile_idx in all(p.enemy_positions) do
                 attackable_units[tile_idx] = true
             end
@@ -365,15 +365,8 @@ function create_enemy_turn()
     local path, logic_co, anim_co, cursor, enemy = {}
     return {
         enter = function(p)
-            printh("We are in the enemy turn", "logs/debug.txt")
-            enemy, cursor = p.enemy, p.cursor
+            enemy, cursor, path = p.enemy, p.cursor, p.path
             logic_co = cocreate(function()
-                -- Calculate path (logic)
-                path = find_optimal_attack_path(enemy, units, castles, function(pos)
-                    local u = get_unit_at(pos, units)
-                    return (u == nil or u.team == enemy.team) and map_get(pos) < 6
-                end)
-                
                 if path and #path > 0 then
                     path = trim_path_tail_by_costs(path, enemy.Mov)
                     path = trim_path_tail_if_occupied(path, units)
@@ -399,8 +392,8 @@ function create_enemy_turn()
                 
                 -- Find attack targets (pure logic)
                 local player_units = {}
-                for _,t in ipairs(get_tiles_within_distance(cursor, enemy.Atr)) do
-                    local u = get_unit_at(t, units, false)
+                for t in all(get_tiles_within_distance(cursor, enemy.Atr)) do
+                    local u = units[t]
                     if u and u.team == "player" then add(player_units, u) end
                 end
     
@@ -456,46 +449,53 @@ function create_enemy_turn()
 end
 
 function create_enemy_phase()
-    local path, logic_co, anim_co, current_enemy, cursor = {}
+    local cam_path, logic_co, anim_co, current_enemy, cursor = {}
     return {
         enter = function(p)
             cursor = p.cursor
-            printh("cursor is "..cursor, "logs/debug.txt")
-            local enemies = sort_enemy_turn_order(units, castles)
+            local enemies = sort_enemy_turn_order(units)
             printh("amount of enemies: "..#enemies, "logs/debug.txt")
             logic_co = cocreate(function()
-                -- Find all active enemies (logic coroutine)
-                
-                -- printh("current enemy: "..enemies[1], "logs/debug.txt")
-                
-                if #enemies == 0 then
-                    phase = "player"
-                    change_state("phase_change", {cursor=cursor})
-                else
-                    current_enemy = enemies[1][1]
-                    path = generate_full_path(cursor, {current_enemy.x, current_enemy.y})
-                    
-                    -- Start animation coroutine
-                    anim_co = cocreate(function()
-                        for i=1,#path do
-                            local v = path[i]
-                            cursor = vectoindex({v[1], v[2]})
-                            update_camera(cursor)
-                            local t = time()
-                            while time() - t < 0.05 do
-                                yield()
-                            end
-                        end
+                for current_enemy in all(enemies) do
+                    local path = find_optimal_attack_path(current_enemy, units, castles, function(pos)
+                        local u = units[pos]
+                        return (u == nil or u.team == current_enemy.team) and map_get(pos) < 6
                     end)
-                    
-                    -- Wait for animation to complete (or be skipped)
-                    while anim_co and costatus(anim_co) ~= "dead" do
-                        yield()
+                    printh("current enemy: "..current_enemy.enemy_ai, "logs/debug.txt")
+                    printh("path length: "..#path, "logs/debug.txt")
+                    if current_enemy.enemy_ai == "Charge" or #path <= current_enemy.Mov then
+                        cam_path = generate_full_path(cursor, {current_enemy.x, current_enemy.y})
+                        
+                        -- Start animation coroutine
+                        anim_co = cocreate(function()
+                            for i=1,#cam_path do
+                                local v = cam_path[i]
+                                cursor = vectoindex({v[1], v[2]})
+                                update_camera(cursor)
+                                local t = time()
+                                while time() - t < 0.05 do
+                                    yield()
+                                end
+                            end
+                        end)
+                        
+                        -- Wait for animation to complete (or be skipped)
+                        while anim_co and costatus(anim_co) ~= "dead" do
+                            yield()
+                        end
+                        
+                        -- Proceed to enemy turn
+                        change_state("enemy_turn", {enemy=current_enemy, cursor=cursor, path=path})
+
+                        return -- necessary to not continue to the next non-charge unit
+                    else
+                        current_enemy.exhausted = true
                     end
-                    
-                    -- Proceed to enemy turn
-                    change_state("enemy_turn", {enemy=current_enemy, cursor=cursor})
                 end
+
+                -- leave
+                phase = "player"
+                change_state("phase_change", {cursor=cursor})
             end)
         end,
     
@@ -504,8 +504,8 @@ function create_enemy_phase()
                 -- Skip animation by killing the anim coroutine
                 anim_co = nil
                 -- Jump to final position
-                if #path > 0 then
-                    local v = path[#path]
+                if #cam_path > 0 then
+                    local v = cam_path[#cam_path]
                     cursor = vectoindex({v[1], v[2]})
                     update_camera(cursor)
                 end
