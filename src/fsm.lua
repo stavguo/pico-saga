@@ -400,9 +400,13 @@ function create_enemy_turn()
                 -- Transition to next state
                 if #player_units == 0 then
                     local c_idx = check_for_castle(cursor, true)
-                    if (c_idx ~= nil) flip_castle(c_idx, castles)
-                    enemy.exhausted = true
-                    change_state("enemy_phase", {cursor=cursor})
+                    if (c_idx ~= nil) then
+                        flip_castle(c_idx, castles)
+                        change_state("castle_capture", {cursor=cursor,capturer=enemy})
+                    else
+                        enemy.exhausted = true
+                        change_state("enemy_phase", {cursor=cursor})
+                    end
                 else
                     SHUFFLE(player_units)
                     change_state("combat", {
@@ -448,11 +452,47 @@ function create_enemy_turn()
     }
 end
 
-function create_enemy_phase()
-    local cam_path, logic_co, anim_co, current_enemy, cursor = {}
+function create_castle_capture_state()
+    local ui, cursor, capturer = {}
     return {
         enter = function(p)
-            cursor = p.cursor
+            cursor, capturer, ui = p.cursor, p.capturer, {}
+            local msg = {
+                capturer.team.." "..capturer.class.." ".."captured",
+                (capturer.team == "player" and "enemy" or "player").." castle!"
+            }
+            create_ui(msg, ui, false)
+        end,
+        update = function()
+            if btnp(4) or btnp(5) then
+                capturer.exhausted = true
+                local game_over = true
+                for _, castle in pairs(castles) do
+                    if (castle.team != capturer.team) game_over = false
+                end
+                if game_over then
+                    change_state("game_over", {win=capturer.team=="player"})
+                else
+                    change_state(capturer.team == "enemy" and "enemy_phase" or "overworld", {cursor=cursor})
+                end
+            end
+        end,
+        draw = function()
+            draw_units(units, function(u)
+                return u ~= capturer
+            end, false)
+            if capturer then draw_unit_at(capturer, nil, true) end
+            draw_ui(cursor, ui)
+        end
+    }
+end
+
+function create_enemy_phase()
+    local cam_path, ui, logic_co, anim_co, current_enemy, cursor
+    return {
+        enter = function(p)
+            cursor, ui = p.cursor, {}
+            create_ui({"Loading..."}, ui, false)
             local enemies = sort_enemy_turn_order(units)
             printh("amount of enemies: "..#enemies, "logs/debug.txt")
             logic_co = cocreate(function()
@@ -504,7 +544,7 @@ function create_enemy_phase()
                 -- Skip animation by killing the anim coroutine
                 anim_co = nil
                 -- Jump to final position
-                if #cam_path > 0 then
+                if cam_path and #cam_path > 0 then
                     local v = cam_path[#cam_path]
                     cursor = vectoindex({v[1], v[2]})
                     update_camera(cursor)
@@ -530,6 +570,7 @@ function create_enemy_phase()
         draw = function()
             draw_units(units)
             draw_cursor(cursor, true)
+            if (not anim_co or costatus(anim_co) == "dead") draw_ui(cursor, ui)
         end
     }
 end
@@ -571,10 +612,11 @@ function create_phase_change()
 end
 
 function create_game_over()
-    local go_text, reset_text
+    local win, go_text, reset_text
     return {
-        enter = function()
-            go_text = phase == "game_over" and "game over" or "stage clear"
+        enter = function(p)
+            win = p.win
+            go_text = not win and "game over" or "stage clear"
             reset_text = "PRESS ANY BUTTON TO RESET"
         end,
         update = function()
@@ -584,7 +626,7 @@ function create_game_over()
         end,
         draw = function()
             draw_units(units)
-            draw_centered_text(go_text, phase == "game_over" and 8 or 12)
+            draw_centered_text(go_text, not win and 8 or 12)
             draw_centered_text(reset_text, 7, 67)
         end,
         exit = function()

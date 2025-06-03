@@ -135,7 +135,7 @@ function init_castles(castles)
         if (i == player) cursor = idx
         castles[idx] = { team = i == player and "player" or "enemy", units = {} }
         mset(x, y, i == player and 8 or 9)
-    end
+            end
     return cursor
 end
 
@@ -165,11 +165,11 @@ function check_for_castle(t_idx, is_enemy_turn)
     local adj_tiles = get_neighbors(t_idx, function (idx)
         return map_get(idx) == (is_enemy_turn and 8 or 9)
     end)
-    return #adj_tiles > 0 and vectoindex(adj_tiles[1]) or nil
+    return #adj_tiles > 0 and adj_tiles[1] or nil
 end
 
 function flip_castle(c_idx, castles)
     local pos, current = indextovec(c_idx), castles[c_idx]
-    castles[c_idx] = current == "player" and "enemy" or "player"
-    mset(pos[1], pos[2], current == "player" and 9 or 8)
+    current.team = current.team == "player" and "enemy" or "player"
+    mset(pos[1], pos[2], current.team == "player" and 8 or 9)
 end
