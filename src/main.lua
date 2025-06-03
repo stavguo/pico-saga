@@ -11,7 +11,7 @@ function change_state(name, payload)
 end
 
 function _init()
-    castles, units, phase = {}, {}, "player"
+    castles, units = {}, {}
     states = {
         setup = create_setup_state(),
         overworld = create_overworld_state(),

@@ -22,9 +22,7 @@ function create_setup_state()
             init_player_units(castles[cursor].units)
             init_enemy_units(castles, units)
     
-            phase = "player"
-            change_state("phase_change", {cursor=cursor})
-            --change_state("overworld", {cursor=cursor})
+            change_state("phase_change", {cursor=cursor, phase="player"})
         end
     }
 end
@@ -38,11 +36,6 @@ function create_overworld_state()
                 if p.cursor then cursor = p.cursor end
                 if p.cam then camera(p.cam[1], p.cam[2]) end
             end
-            -- if is_phase_over("player") then
-            --     printh("it thinks we're done", "logs/debug.txt")
-            --     phase = "enemy"
-            --     change_state("phase_change", {cursor=cursor})
-            -- end
         end,
         update = function()
             if btnp(0) or btnp(1) or btnp(2) or btnp(3) then
@@ -59,10 +52,7 @@ function create_overworld_state()
     
             if btnp(5) then
                 if not selected_unit then
-                    phase = "enemy"
-                    change_state("phase_change", {cursor=cursor})
-                    -- fsm.phase = "stage_clear"
-                    -- fsm:change_state("game_over")
+                    change_state("phase_change", {cursor=cursor, phase="enemy"})
                 else
                     selected_unit, traversable_tiles = nil, nil
                 end
@@ -339,7 +329,7 @@ function create_combat_state()
                 
                 -- End combat
                 attacker.exhausted = true
-                if phase == "enemy" then
+                if attacker.team == "enemy" then
                     change_state("enemy_phase", {cursor=cursor})
                 else
                     change_state("overworld", {cursor=cursor})
@@ -534,8 +524,7 @@ function create_enemy_phase()
                 end
 
                 -- leave
-                phase = "player"
-                change_state("phase_change", {cursor=cursor})
+                change_state("phase_change", {cursor=cursor, phase="player"})
             end)
         end,
     
@@ -576,10 +565,10 @@ function create_enemy_phase()
 end
 
 function create_phase_change()
-    local co, cursor
+    local co, cursor, phase
     return {
         enter = function(p)
-            cursor = p.cursor
+            cursor, phase = p.cursor, p.phase
             for _, unit in pairs(units) do
                 if (phase == "enemy" and unit.team == "player") or (phase == "player" and unit.team == "enemy") then
                     unit.exhausted = false
@@ -633,7 +622,6 @@ function create_game_over()
             reset()
             castles = {}
             units = {}
-            phase = "player"
             camera(0, 0)
         end
     }
