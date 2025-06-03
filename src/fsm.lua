@@ -610,19 +610,13 @@ function create_game_over()
         end,
         update = function()
             if btnp(0) or btnp(1) or btnp(2) or btnp(3) or btnp(4) or btnp(5) then
-                change_state("setup")
+                extcmd('reset')
             end
         end,
         draw = function()
             draw_units(units)
             draw_centered_text(go_text, not win and 8 or 12)
             draw_centered_text(reset_text, 7, 67)
-        end,
-        exit = function()
-            reset()
-            castles = {}
-            units = {}
-            camera(0, 0)
         end
     }
 end
