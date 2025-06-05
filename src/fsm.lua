@@ -479,11 +479,10 @@ function create_castle_capture_state()
 end
 
 function create_enemy_phase()
-    local cam_path, ui, logic_co, anim_co, current_enemy, cursor
+    local cam_path, logic_co, anim_co, current_enemy, cursor
     return {
         enter = function(p)
-            cursor, ui = p.cursor, {}
-            create_ui({"Loading..."}, ui, false)
+            cursor = p.cursor
             local enemies = sort_enemy_turn_order(units)
             printh("amount of enemies: "..#enemies, "logs/debug.txt")
             logic_co = cocreate(function()
@@ -560,7 +559,6 @@ function create_enemy_phase()
         draw = function()
             draw_units(units)
             draw_cursor(cursor, true)
-            if (not anim_co or costatus(anim_co) == "dead") draw_ui(cursor, ui)
         end
     }
 end
