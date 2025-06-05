@@ -48,6 +48,17 @@ function init_terrain(noise_fn, tree_fn)
     end
 end
 
+function draw_side_bars()
+    local current_x, current_y = peek2(0x5f28), peek2(0x5f2a)
+    local offset_x, offset_y = current_x / 2, current_y / 2
+    color(13)
+    line(current_x, current_y + 127, current_x + 127, current_y + 127)
+    line(current_x + 127, current_y, current_x + 127, current_y + 127)
+    color(1)
+    line(current_x + offset_x, current_y + 127, current_x + (127/2) + offset_x, current_y + 127)
+    line(current_x + 127, current_y + offset_y, current_x + 127, current_y + (127/2) + offset_y)
+end
+
 function draw_traversable_edges(traversable_tiles, col)
     -- Create lookup table
     local traversable_lookup = {}

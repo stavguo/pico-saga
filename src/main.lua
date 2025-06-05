@@ -29,7 +29,7 @@ function _init()
     change_state("setup")
 end
 
-function _update()
+function _update60()
     if states[current_state].update then
         states[current_state].update()
     end
@@ -38,6 +38,7 @@ end
 function _draw()
     cls()
     map()
+    draw_side_bars()
     if states[current_state].draw then
         states[current_state].draw()
     end

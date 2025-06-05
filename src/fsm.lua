@@ -22,6 +22,7 @@ function create_setup_state()
             init_player_units(castles[cursor].units)
             init_enemy_units(castles, units)
     
+            update_camera(cursor, true)
             change_state("phase_change", {cursor=cursor, phase="player"})
         end
     }
@@ -366,7 +367,7 @@ function create_enemy_turn()
                         for i=1,#path do
                             local v = indextovec(path[i])
                             cursor = vectoindex({v[1], v[2]})
-                            update_camera(cursor)
+                            update_camera(cursor, true)
                             local t = time()
                             while time() - t < 0.2 do yield() end
                         end
@@ -415,7 +416,7 @@ function create_enemy_turn()
                 if #path > 0 then
                     local v = indextovec(path[#path])
                     cursor = vectoindex({v[1], v[2]})
-                    update_camera(cursor)
+                    update_camera(cursor, true)
                 end
             end
             
@@ -492,8 +493,8 @@ function create_enemy_phase()
                         return (u == nil or u.team == current_enemy.team) and map_get(pos) < 6
                     end)
                     printh("current enemy: "..current_enemy.enemy_ai, "logs/debug.txt")
-                    printh("path length: "..#path, "logs/debug.txt")
-                    if current_enemy.enemy_ai == "Charge" or #path <= current_enemy.Mov then
+                    if path then
+                        printh("path length: "..#path, "logs/debug.txt")
                         cam_path = generate_full_path(cursor, {current_enemy.x, current_enemy.y})
                         
                         -- Start animation coroutine
@@ -501,9 +502,9 @@ function create_enemy_phase()
                             for i=1,#cam_path do
                                 local v = cam_path[i]
                                 cursor = vectoindex({v[1], v[2]})
-                                update_camera(cursor)
+                                update_camera(cursor, true)
                                 local t = time()
-                                while time() - t < 0.05 do
+                                while time() - t < 0.1 do
                                     yield()
                                 end
                             end
@@ -536,7 +537,7 @@ function create_enemy_phase()
                 if cam_path and #cam_path > 0 then
                     local v = cam_path[#cam_path]
                     cursor = vectoindex({v[1], v[2]})
-                    update_camera(cursor)
+                    update_camera(cursor, true)
                 end
             end
             
