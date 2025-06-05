@@ -134,11 +134,6 @@ function get_tiles_within_distance(tile_idx, max_distance, filter_func)
     return result
 end
 
-function find_enemy(x, y, units)
-    local key = vectoindex({x,y})
-    return units[key] ~= nil and units[key].team == "enemy"
-end
-
 function hit_chance(att_skl, def_spd, def_idx)
     local terrain = map_get(def_idx)
     local terrain_effect = TERRAIN_EFFECTS[terrain] or 0
@@ -215,10 +210,7 @@ end
 
 function is_phase_over(team)
     for _, unit in pairs(units) do
-        printh(team, "logs/debug.txt")
-        printh(unit.exhausted, "logs/debug.txt")
         if unit.team == team and unit.exhausted == false then
-            printh("should be returning false", "logs/debug.txt")
             return false
         end
     end

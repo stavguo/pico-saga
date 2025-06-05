@@ -62,7 +62,7 @@ function draw_ui(cursor, ui_stack)
 end
 
 function draw_centered_text(text, color_idx, height)
-    local x, y = peek2(0x5f28) + hcenter(text), peek2(0x5f2a) + (height or 61)
+    local x, y = peek2(0x5f28) + (64-#text*2), peek2(0x5f2a) + (height or 61)
     rectfill(x-1, y-1, x - 1 + #text*4, y+5, 0)
     color(color_idx)
     print(text, x, y)

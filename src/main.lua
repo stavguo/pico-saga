@@ -1,4 +1,4 @@
-state, current_state = {}
+local current_state, states
 
 function change_state(name, payload)
     if current_state and states[current_state].exit then

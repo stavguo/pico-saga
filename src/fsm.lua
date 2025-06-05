@@ -391,11 +391,10 @@ function create_enemy_turn()
                 end
                 
                 -- Find attack targets (pure logic)
-                local player_units = {}
-                for t in all(get_tiles_within_distance(cursor, enemy.Atr)) do
-                    local u = units[t]
-                    if u and u.team == "player" then add(player_units, u) end
-                end
+                local player_units = get_tiles_within_distance(cursor, enemy.Atr, function (idx)
+                    local unit = units[idx]
+                    return unit and unit.team == "player"
+                end)
     
                 -- Transition to next state
                 if #player_units == 0 then
@@ -430,18 +429,10 @@ function create_enemy_turn()
             end
             
             if logic_co and costatus(logic_co) ~= "dead" then
-                local active, exception = coresume(logic_co)
-                if exception then
-                    printh(trace(logic_co, exception), "logs/debug.txt")
-                    stop()
-                end
+                coresume(logic_co)
             end
             if anim_co and costatus(anim_co) ~= "dead" then
-                local active, exception = coresume(anim_co)
-                if exception then
-                    printh(trace(anim_co, exception), "logs/debug.txt")
-                    stop()
-                end
+                coresume(anim_co)
             end
         end,
     
@@ -458,16 +449,13 @@ function create_enemy_phase()
         enter = function(p)
             cursor = p.cursor
             local enemies = sort_enemy_turn_order(units)
-            printh("amount of enemies: "..#enemies, "logs/debug.txt")
             logic_co = cocreate(function()
                 for current_enemy in all(enemies) do
                     local path = find_optimal_attack_path(current_enemy, units, castles, function(pos)
                         local u = units[pos]
                         return (u == nil or u.team == current_enemy.team) and map_get(pos) < 6
                     end)
-                    printh("current enemy: "..current_enemy.enemy_ai, "logs/debug.txt")
                     if path then
-                        printh("path length: "..#path, "logs/debug.txt")
                         cam_path = generate_full_path(cursor, {current_enemy.x, current_enemy.y})
                         
                         -- Start animation coroutine
@@ -515,18 +503,10 @@ function create_enemy_phase()
             end
             
             if logic_co and costatus(logic_co) ~= "dead" then
-                local active, exception = coresume(logic_co)
-                if exception then
-                    printh(trace(logic_co, exception), "logs/debug.txt")
-                    stop()
-                end
+                coresume(logic_co)
             end
             if anim_co and costatus(anim_co) ~= "dead" then
-                local active, exception = coresume(anim_co)
-                if exception then
-                    printh(trace(anim_co, exception), "logs/debug.txt")
-                    stop()
-                end
+                coresume(anim_co)
             end
         end,
     
@@ -599,9 +579,7 @@ function create_castle_capture_state()
             end
         end,
         draw = function()
-            draw_units(units, function(u)
-                return u ~= capturer
-            end, false)
+            draw_nonselected_overworld_units(capturer)
             if capturer then draw_unit_at(capturer, nil, true) end
             draw_ui(cursor, ui)
         end

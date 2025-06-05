@@ -31,9 +31,9 @@ function find_optimal_attack_path(finder, units, castles, filter_func)
             local range_tiles = get_tiles_within_distance(
                 vectoindex({unit.x, unit.y}),
                 finder.Atr,
-                function(pos)
-                    local unit = units[pos]
-                    return (unit == nil or unit == finder) and map_get(pos) < 6
+                function(idx)
+                    local unit = units[idx]
+                    return (unit == nil or unit == finder) and map_get(idx) < 6
                 end
             )
             for _, pos in ipairs(range_tiles) do
@@ -85,7 +85,6 @@ function trim_path_tail_if_occupied(path, units)
         if not units[path[i]] then
             break
         end
-        printh("path was trimmed!", "logs/debug.txt")
         deli(path, i)
     end
     return path

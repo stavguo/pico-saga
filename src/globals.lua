@@ -64,14 +64,6 @@ function SHUFFLE(items)
     end
 end
 
--- insert into start of table
-function insert(t, val)
-    for i=(#t+1),2,-1 do
-        t[i] = t[i-1]
-    end
-    t[1] = val
-end
-
 -- insert into table and sort by priority
 function insert(t, val, p)
     if #t >= 1 then
@@ -109,13 +101,4 @@ function indextovec(index)
     local i = index - 1
     local x, y = i % 32, i \ 32
     return {x,y}
-end
-
--- manhattan distance on a square grid
-function heuristic(a, b)
-    return abs(a[1] - b[1]) + abs(a[2] - b[2])
-end
-
-function hcenter(s)
-    return 64-#s*2
 end
