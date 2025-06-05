@@ -29,10 +29,10 @@ function create_setup_state()
 end
 
 function create_overworld_state()
-    local cursor, selected_unit, traversable_tiles
+    local cursor, selected_unit, traversable_tiles, ui
     return {
         enter = function(p)
-            if selected_unit ~= nil then printh("this is bad", "logs/debug.txt") end
+            ui, selected_unit = {}
             if p then
                 if p.cursor then cursor = p.cursor end
                 if p.cam then camera(p.cam[1], p.cam[2]) end
@@ -45,22 +45,23 @@ function create_overworld_state()
                         change_state("move_unit", {unit=selected_unit, cursor=cursor, start=cursor})
                     end
                 else
-                    cursor = update_cursor(cursor, 31, 31)
+                    cursor, ui = update_cursor(cursor, 31, 31), {}
                 end
             end
     
             update_camera(cursor)
     
             if btnp(5) then
-                if not selected_unit then
-                    change_state("phase_change", {cursor=cursor, phase="enemy"})
+                if not next(ui) then
+                    change_state("turn_end", {cursor=cursor})
                 else
-                    selected_unit, traversable_tiles = nil, nil
+                    selected_unit, traversable_tiles, ui = nil, nil, {}
                 end
             end
     
             -- Select castle or unit
             if btnp(4) then
+                ui = {}
                 local castle, unit = castles[cursor], units[cursor]
                 if castle and castle.team == "player" then
                     change_state("castle", {castle=castle, pos=cursor, ov_cam={ peek2(0x5f28), peek2(0x5f2a) }})
@@ -70,27 +71,34 @@ function create_overworld_state()
                         local unit = units[idx]
                         return (unit == nil or unit.team == selected_unit.team) and map_get(idx) < 6
                     end)
+                    create_unit_info(selected_unit, ui)
+                else
+                    local m_idx = map_get(cursor)
+                    create_ui({
+                        TERRAIN_TYPES[m_idx],
+                        (TERRAIN_COSTS[m_idx] and "mOV:-"..TERRAIN_COSTS[m_idx] or nil),
+                        (TERRAIN_EFFECTS[m_idx] and "aVO:+"..TERRAIN_EFFECTS[m_idx].."%" or nil)
+                    }, ui)
                 end
             end
         end,
         draw = function()
-            if selected_unit then draw_traversable_edges(traversable_tiles, selected_unit.team == "player" and 7 or 8) end
-            draw_nonselected_overworld_units(selected_unit)
             if selected_unit then
+                draw_traversable_edges(traversable_tiles, selected_unit.team == "player" and 7 or 8)
                 draw_unit_at(selected_unit, nil, true)
-                show_unit_info(selected_unit, cursor)
             end
+            draw_nonselected_overworld_units(selected_unit)
             draw_cursor(cursor, true)
-        end,
-        exit = function () selected_unit = nil end
+            draw_ui(cursor, ui)
+        end
     }
 end
 
 function create_castle_state()
-    local selected_unit, castle, pos, ov_cam, cursor
+    local selected_unit, castle, pos, ov_cam, cursor, ui
     return {
         enter = function(p)
-            castle, pos, ov_cam = p.castle, p.pos, p.ov_cam
+            castle, pos, ov_cam, ui = p.castle, p.pos, p.ov_cam, {}
     
             -- Store the cursor's screen position before moving the camera
             local castle_pos = indextovec(pos)
@@ -117,12 +125,13 @@ function create_castle_state()
                 if not selected_unit then
                     change_state("overworld", {cursor=pos, cam=ov_cam})
                 else
-                    selected_unit = nil
+                    selected_unit, ui = nil, {}
                 end
             elseif btnp(4) then
                 local unit = castle.units[cursor]
                 if unit then
-                    selected_unit = unit
+                    selected_unit, ui = unit, {}
+                    create_unit_info(selected_unit, ui)
                 end
             end
         end,
@@ -133,9 +142,9 @@ function create_castle_state()
             end)
             if selected_unit then
                 draw_unit_at(selected_unit, nil, true)
-                show_unit_info(selected_unit, cursor)
             end
             draw_cursor(cursor, true)
+            draw_ui(cursor, ui)
         end,
         exit = function () selected_unit = nil end
     }
@@ -443,41 +452,6 @@ function create_enemy_turn()
     }
 end
 
-function create_castle_capture_state()
-    local ui, cursor, capturer = {}
-    return {
-        enter = function(p)
-            cursor, capturer, ui = p.cursor, p.capturer, {}
-            local msg = {
-                capturer.team.." "..capturer.class.." ".."captured",
-                (capturer.team == "player" and "enemy" or "player").." castle!"
-            }
-            create_ui(msg, ui, false)
-        end,
-        update = function()
-            if btnp(4) or btnp(5) then
-                capturer.exhausted = true
-                local game_over = true
-                for _, castle in pairs(castles) do
-                    if (castle.team != capturer.team) game_over = false
-                end
-                if game_over then
-                    change_state("game_over", {win=capturer.team=="player"})
-                else
-                    change_state(capturer.team == "enemy" and "enemy_phase" or "overworld", {cursor=cursor})
-                end
-            end
-        end,
-        draw = function()
-            draw_units(units, function(u)
-                return u ~= capturer
-            end, false)
-            if capturer then draw_unit_at(capturer, nil, true) end
-            draw_ui(cursor, ui)
-        end
-    }
-end
-
 function create_enemy_phase()
     local cam_path, logic_co, anim_co, current_enemy, cursor
     return {
@@ -595,6 +569,62 @@ function create_phase_change()
                 (phase == "enemy") and "Enemy Phase" or "Player Phase",
                 (phase == "enemy") and 8 or 12
             )
+        end
+    }
+end
+
+function create_castle_capture_state()
+    local ui, cursor, capturer = {}
+    return {
+        enter = function(p)
+            cursor, capturer, ui = p.cursor, p.capturer, {}
+            local msg = {
+                capturer.team.." "..capturer.class.." ".."captured",
+                (capturer.team == "player" and "enemy" or "player").." castle!"
+            }
+            create_ui(msg, ui, false)
+        end,
+        update = function()
+            if btnp(4) or btnp(5) then
+                capturer.exhausted = true
+                local game_over = true
+                for _, castle in pairs(castles) do
+                    if (castle.team != capturer.team) game_over = false
+                end
+                if game_over then
+                    change_state("game_over", {win=capturer.team=="player"})
+                else
+                    change_state(capturer.team == "enemy" and "enemy_phase" or "overworld", {cursor=cursor})
+                end
+            end
+        end,
+        draw = function()
+            draw_units(units, function(u)
+                return u ~= capturer
+            end, false)
+            if capturer then draw_unit_at(capturer, nil, true) end
+            draw_ui(cursor, ui)
+        end
+    }
+end
+
+function create_turn_end_confirmation()
+    local cursor
+    return {
+        enter = function(p)
+            cursor = p.cursor
+        end,
+        update = function()
+            if btnp(4) then
+                change_state("phase_change", {cursor=cursor, phase="enemy"})
+            elseif btnp(5) then
+                change_state("overworld", {cursor=cursor})
+            end
+        end,
+        draw = function()
+            draw_units(units)
+            draw_centered_text("🅾️:end turn ", 8)
+            draw_centered_text("❎:go back ", 12, 67)
         end
     }
 end

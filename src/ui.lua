@@ -1,11 +1,9 @@
-function show_unit_info(unit, cursor)
-    local ui = {}
+function create_unit_info(unit, ui)
     create_ui({
         unit.team.." "..unit.class,
         "HP:" .. unit.HP .. " Mov:" .. unit.Mov,
         (unit.team == "enemy" and "AI:" .. unit.enemy_ai or nil)
     }, ui)
-    draw_ui(cursor, ui)
 end
 
 function create_ui(options, ui, is_interactive, anchor)

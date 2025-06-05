@@ -21,9 +21,10 @@ function _init()
         attack_menu = create_attack_menu_state(),
         combat = create_combat_state(),
         enemy_turn = create_enemy_turn(),
-        castle_capture = create_castle_capture_state(),
         enemy_phase = create_enemy_phase(),
         phase_change = create_phase_change(),
+        castle_capture = create_castle_capture_state(),
+        turn_end = create_turn_end_confirmation(),
         game_over = create_game_over()
     }
     change_state("setup")

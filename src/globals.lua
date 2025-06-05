@@ -1,3 +1,13 @@
+TERRAIN_TYPES = {
+    [1] = "plains", -- PLAINS
+    [2] = "shoal" , -- SHOAL
+    [3] = "forest" , -- FOREST
+    [4] = "thicket" , -- THICKET
+    [5] = "sand" , -- SAND
+    [6] = "sea", -- Sea
+    [7] = "cliff", -- Mountain
+}
+
 TERRAIN_COSTS = {
     [1] = 1, -- PLAINS
     [3] = 2 , -- FOREST
