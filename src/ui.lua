@@ -31,20 +31,20 @@ end
 
 function get_ui_selection(ui)
     for i = #ui, 1, -1 do
-        local ui = ui[i]
-        if ui.selected > 0 then
-            return ui.items[ui.selected]
+        local el = ui[i]
+        if el.selected > 0 then
+            return el.items[el.selected]
         end
     end
     return nil
 end
 
-function get_anchor(cursor, count)
-    count, cursor = count or 1, indextovec(cursor)
+function get_anchor(cursor, items)
+    items, cursor = items or 1, indextovec(cursor)
     local cx, cy = cursor[1] - (peek2(0x5f28) \ 8), cursor[2] - (peek2(0x5f2a) \ 8)
     local left, top = cx < 8, cy < 8
-    return (count == 1 and (left and "tr" or "tl")) or
-        (count == 2 and (left and "br" or "bl")) or
+    return (items == 1 and (left and "tr" or "tl")) or
+        (items == 2 and (left and "br" or "bl")) or
         (left and (top and "bl" or "tl") or (top and "br" or "tr"))
 end
 

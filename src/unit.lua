@@ -31,8 +31,8 @@ function move_unit(u, old_idx, new_idx)
     units[new_idx]=u
 end
 
-function get_neighbors(t,f)
-    local v=indextovec(t)
+function get_neighbors(idx,f)
+    local v=indextovec(idx)
     local n={}
     local d={{-1,0},{1,0},{0,-1},{0,1}}
 
@@ -44,7 +44,7 @@ function get_neighbors(t,f)
         end
     end
 
-    if t%2>0 then reverse(n) end
+    if idx%2>0 then reverse(n) end
     return n
 end
 
@@ -61,16 +61,16 @@ function init_player_units(units)
     units[vectoindex({throne,1})] = create_unit(throne, 1, player_classes[leader_idx], "player", true)
 
     -- Place 8 units in formation
-    count = 0
+    local counter = 0
     for i = 1, 9 do
         if i ~= leader_idx then
-            local row = (count \ 4)
-            local pos = count % 4
+            local row = (counter \ 4)
+            local pos = counter % 4
             local is_right = pos >= 2
             local x = is_right and (11 + (pos - 2) * 2) or (2 + pos * 2)
             local y = 2 + row * 2
             units[vectoindex({x,y})] = create_unit(x, y, player_classes[i], "player", true)
-            count = count + 1
+            counter = counter + 1
         end
     end
 end
@@ -206,15 +206,6 @@ function draw_nonselected_overworld_units(selected)
     draw_units(units, function (unit)
         return unit ~= selected
     end)
-end
-
-function is_phase_over(team)
-    for _, unit in pairs(units) do
-        if unit.team == team and unit.exhausted == false then
-            return false
-        end
-    end
-    return true
 end
 
 function sort_enemy_turn_order(units)

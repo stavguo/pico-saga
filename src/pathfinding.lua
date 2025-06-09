@@ -32,12 +32,12 @@ function find_optimal_attack_path(finder, units, castles, filter_func)
                 vectoindex({unit.x, unit.y}),
                 finder.Atr,
                 function(idx)
-                    local unit = units[idx]
-                    return (unit == nil or unit == finder) and map_get(idx) < 6
+                    local u = units[idx]
+                    return (u == nil or u == finder) and map_get(idx) < 6
                 end
             )
-            for _, pos in ipairs(range_tiles) do
-                attackable[pos] = true
+            for _, idx in ipairs(range_tiles) do
+                attackable[idx] = true
             end
         end
     end
@@ -47,25 +47,25 @@ function find_optimal_attack_path(finder, units, castles, filter_func)
         if castle.team == "player" then
             local range_tiles = get_neighbors(
                 castle_idx,
-                function(pos)
-                    local unit = units[pos]
-                    return (unit == nil or unit == finder) and map_get(pos) < 6
+                function(idx)
+                    local u = units[idx]
+                    return (u == nil or u == finder) and map_get(idx) < 6
                 end
             )
-            for pos in all(range_tiles) do
-                attackable[pos] = true
+            for idx in all(range_tiles) do
+                attackable[idx] = true
             end
         end
     end
 
     if next(attackable) == nil then return {} end
 
-    -- 2. Perform pathfinding to find movement costs
+    -- Perform pathfinding to find movement costs
     local start_key = vectoindex({finder.x, finder.y})
     local costs, prev = find_traversable_tiles(start_key, (finder.enemy_ai != "Charge" and finder.Mov or nil), filter_func)
     
 
-    -- 3. Find intersection and sort using your insert
+    -- Find intersection and sort using your insert
     local potential = {} -- Returns array of {{key,cost},...} sorted by cost desc
     for pos_key in pairs(attackable) do
         if costs[pos_key] then
@@ -73,7 +73,7 @@ function find_optimal_attack_path(finder, units, castles, filter_func)
         end
     end
 
-    -- 4. Reconstruct path
+    -- Reconstruct path
     if #potential >= 1 then
         return reconstruct_path(prev, potential[#potential][1])
     end

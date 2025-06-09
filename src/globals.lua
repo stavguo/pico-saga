@@ -65,30 +65,30 @@ function SHUFFLE(items)
 end
 
 -- insert into table and sort by priority
-function insert(t, val, p)
-    if #t >= 1 then
-        add(t, {})
-        for i=(#t),2,-1 do
-            local next = t[i-1]
-            if p < next[2] then
-                t[i] = {val, p}
+function insert(tbl, val, p)
+    if #tbl >= 1 then
+        add(tbl, {})
+        for i=(#tbl),2,-1 do
+            local prev = tbl[i-1]
+            if p < prev[2] then
+                tbl[i] = {val, p}
                 return
             else
-                t[i] = next
+                tbl[i] = prev
             end
         end
-        t[1] = {val, p}
+        tbl[1] = {val, p}
     else
-        add(t, {val, p}) 
+        add(tbl, {val, p}) 
     end
 end
 
-function reverse(t)
-    for i=1,(#t/2) do
-        local temp = t[i]
-        local oppindex = #t-(i-1)
-        t[i] = t[oppindex]
-        t[oppindex] = temp
+function reverse(tbl)
+    for i=1,(#tbl/2) do
+        local temp = tbl[i]
+        local oppindex = #tbl-(i-1)
+        tbl[i] = tbl[oppindex]
+        tbl[oppindex] = temp
     end
 end
 

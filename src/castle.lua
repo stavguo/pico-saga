@@ -125,7 +125,7 @@ function find_castle_spots()
     return best_spots
 end
 
-function init_castles(castles)
+function init_castles(c)
     local spots, cursor = find_castle_spots()
     local player = flr(rnd(4)) + 1
     for i, spot in ipairs(spots) do
@@ -133,7 +133,7 @@ function init_castles(castles)
         local x, y = spot.x + offset_x, spot.y + offset_y
         local idx = vectoindex({ x, y })
         if (i == player) cursor = idx
-        castles[idx] = { team = i == player and "player" or "enemy", units = {} }
+        c[idx] = { team = i == player and "player" or "enemy", units = {} }
         mset(x, y, i == player and 8 or 9)
             end
     return cursor

@@ -1,8 +1,7 @@
 function create_setup_state()
     return {
         enter = function()
-            local seed = flr(rnd(32767))
-            local treeseed = flr(rnd(32767))
+            local seed, treeseed, _seeds_initialized = flr(rnd(32767)), flr(rnd(32767))
             if not _seeds_initialized then
                 printh("", "logs/seeds.txt", true)
                 _seeds_initialized = true
@@ -14,8 +13,7 @@ function create_setup_state()
                 "logs/seeds.txt"
             )
             -- Initialize terrain and castles
-            local noise_fn = os2d_noisefn(seed)
-            local tree_fn = os2d_noisefn(treeseed)
+            local noise_fn, tree_fn = os2d_noisefn(seed), os2d_noisefn(treeseed)
     
             init_terrain(noise_fn, tree_fn)
             local cursor = init_castles(castles)
@@ -68,8 +66,8 @@ function create_overworld_state()
                 elseif unit then
                     selected_unit = unit
                     traversable_tiles = find_traversable_tiles(cursor, selected_unit.Mov, function (idx)
-                        local unit = units[idx]
-                        return (unit == nil or unit.team == selected_unit.team) and map_get(idx) < 6
+                        local u = units[idx]
+                        return (u == nil or u.team == selected_unit.team) and map_get(idx) < 6
                     end)
                     create_unit_info(selected_unit, ui)
                 else
@@ -301,6 +299,7 @@ function create_combat_state()
     local ui, cursor, co, attacker, defender = {}
     return {
         enter = function(p)
+            attacker, defender, cursor = p.attacker, p.defender, p.cursor
             co = cocreate(function()
                 local function process_attack(atk, def, is_counter)
                     local hit = will_hit(atk.Skl, def.Spd, vectoindex({def.x,def.y}))
@@ -329,7 +328,6 @@ function create_combat_state()
                 end
                 
                 -- Main combat flow
-                attacker, defender, cursor = p.attacker, p.defender, p.cursor
                 local hit, broken = process_attack(attacker, defender, false)
                 
                 -- Counterattack if applicable
@@ -377,8 +375,8 @@ function create_enemy_turn()
                             local v = indextovec(path[i])
                             cursor = vectoindex({v[1], v[2]})
                             update_camera(cursor, true)
-                            local t = time()
-                            while time() - t < 0.2 do yield() end
+                            local lt = time()
+                            while time() - lt < 0.2 do yield() end
                         end
                     end)
                     
@@ -391,10 +389,11 @@ function create_enemy_turn()
                 end
                 
                 -- Find attack targets (pure logic)
-                local player_units = get_tiles_within_distance(cursor, enemy.Atr, function (idx)
-                    local unit = units[idx]
-                    return unit and unit.team == "player"
-                end)
+                local player_units = {}
+                for idx in all(get_tiles_within_distance(cursor, enemy.Atr)) do
+                    local u = units[idx]
+                    if u and u.team == "player" then add(player_units, u) end
+                end
     
                 -- Transition to next state
                 if #player_units == 0 then
@@ -444,7 +443,7 @@ function create_enemy_turn()
 end
 
 function create_enemy_phase()
-    local cam_path, logic_co, anim_co, current_enemy, cursor
+    local cam_path, logic_co, anim_co, cursor
     return {
         enter = function(p)
             cursor = p.cursor
@@ -464,8 +463,8 @@ function create_enemy_phase()
                                 local v = cam_path[i]
                                 cursor = vectoindex({v[1], v[2]})
                                 update_camera(cursor, true)
-                                local t = time()
-                                while time() - t < 0.1 do
+                                local lt = time()
+                                while time() - lt < 0.1 do
                                     yield()
                                 end
                             end
@@ -538,10 +537,7 @@ function create_phase_change()
         update = function()
             update_camera(cursor)
             if btnp(4) then change_state(phase == "enemy" and "enemy_phase" or "overworld", {cursor=cursor}) end
-            local active, exception = coresume(co)
-            if exception then
-                stop(trace(co, exception))
-            end
+            coresume(co)
         end,
         draw = function()
             draw_units(units)

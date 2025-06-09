@@ -1,7 +1,5 @@
 function update_camera(cursor_idx, snap)
-    cursor_pos = indextovec(cursor_idx)
-    -- Define deadzone boundaries (in tiles)
-    local dl, dr, dt, db, cam_x, cam_y = 4, 11, 4, 11, (peek2(0x5f28) \ 8) * 8, (peek2(0x5f2a) \ 8) * 8
+    local dl, dr, dt, db, cam_x, cam_y, cursor_pos = 4, 11, 4, 11, (peek2(0x5f28) \ 8) * 8, (peek2(0x5f2a) \ 8) * 8, indextovec(cursor_idx)
     -- Calculate cursor position in screen space
     local csx, csy = cursor_pos[1] - (cam_x \ 8), cursor_pos[2] - (cam_y \ 8)
     -- Move camera if cursor is outside deadzone
