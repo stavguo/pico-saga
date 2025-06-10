@@ -10,9 +10,9 @@ function find_largest_square(start_x, start_y, width, height, targ)
     -- Process column by column from right to left
     for x = width - 1, 0, -1 do
         for y = height - 1, 0, -1 do
-            local tmp, world_x, world_y, is_grass = dp[y], start_x + x, start_y + y, mget(world_x, world_y) == 1
+            local tmp, world_x, world_y = dp[y], start_x + x, start_y + y
 
-            if not is_grass then
+            if mget(world_x, world_y) ~= 1 then
                 dp[y] = 0
             else
                 -- Get all three neighbors
@@ -46,13 +46,14 @@ function find_largest_square(start_x, start_y, width, height, targ)
 end
 
 function get_square_center(top_left, size, targ)
-    local half = size/2
     -- Odd-sized squares: exact center
     if size % 2 == 1 then
-        return {top_left[1]+half, top_left[2]+half}
+        local offset = size \ 2
+        return {top_left[1]+offset, top_left[2]+offset}
     end
     
     -- Even-sized squares: find closest center to target
+    local half = size/2
     local candidates, possible_centers = {}, {
         {top_left[1]+half-1, top_left[2]+half-1},  -- top-left
         {top_left[1]+half,    top_left[2]+half-1},  -- top-right
@@ -81,12 +82,13 @@ function init_castles(c)
     end
     local player, cursor = flr(rnd(#actual)) + 1
     for i, spot in ipairs(actual) do
-        local x, y, idx = unpack(spot), vectoindex(spot)
+        local x, y = unpack(spot)
+        local idx = vectoindex(spot)
         if (i == player) cursor = idx
         c[idx] = { team = i == player and "player" or "enemy", units = {} }
         mset(x, y, i == player and 8 or 9)
     end
-    return cursor
+        return cursor
 end
 
 -- Draw the interior of a castle
