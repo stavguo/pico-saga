@@ -102,3 +102,7 @@ function indextovec(index)
     local x, y = i % 32, i \ 32
     return {x,y}
 end
+
+function man_dist(a, b)
+    return abs(a[1] - b[1]) + abs(a[2] - b[2])
+end
