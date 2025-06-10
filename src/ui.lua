@@ -67,3 +67,31 @@ function draw_centered_text(text, color_idx, height)
     color(color_idx)
     print(text, x, y)
 end
+
+function draw_mini_map(units)
+    local cx,cy=peek2(0x5f28),peek2(0x5f2a)
+    local mx,my,mw=32,39,64
+    local mt_col={[2]=12,[1]=11,[6]=1,[3]=3,[4]=3,[5]=15,[7]=7,[8]=10,[9]=9}
+    
+    for y=0,31 do
+        for x=0,31 do
+            local mt=mget(x,y)
+            local col=mt_col[mt]
+            local unit=units[vectoindex{x,y}]
+            if unit then col=unit.team=="enemy"and 8 or 12 end
+            if col then
+                local px,py=cx+mx+2*x,cy+my+2*y
+                rectfill(px,py,px+2,py+2,col)
+            end
+        end
+    end
+    
+    local r1=cx+mx-1
+    local r2=cy+my-1
+    local r3=cx+mx+mw
+    local r4=cy+my+mw
+    rect(r1,r2,r3,r4,0)
+    
+    local vx,vy=cx/4,cy/4
+    rect(cx+mx+vx-1,cy+my+vy-1,cx+mx+vx+32,cy+my+vy+32,0)
+end

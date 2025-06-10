@@ -597,8 +597,9 @@ function create_turn_end_confirmation()
         end,
         draw = function()
             draw_units(units)
-            draw_centered_text("🅾️:end turn ", 8)
-            draw_centered_text("❎:go back ", 12, 67)
+            draw_mini_map(units)
+            draw_centered_text("🅾️:end turn ", 8, 25)
+            draw_centered_text("❎:go back ", 12, 32)
         end
     }
 end
