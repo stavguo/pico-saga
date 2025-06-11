@@ -54,16 +54,20 @@ function draw_ui(cursor, ui_stack)
         for j, item in ipairs(ui.items) do
             local x = (anchor == "tl" or anchor == "bl") and (peek2(0x5f28) + 2) or (peek2(0x5f28) + 127 - #item * 4)
             local y = (anchor == "tl" or anchor == "tr") and (peek2(0x5f2a) + 2 + (j-1)*6) or (peek2(0x5f2a) + 121 - (#ui.items - j)*6)
+            pal(0, 1)
             rectfill(x-1, y-1, x - 1 + #item*4, y+5, 0)
             color(ui.selected > 0 and j == ui.selected and 9 or 7)
             print(item, x, y)
+            pal()
         end
     end
 end
 
 function draw_centered_text(text, color_idx, height)
+    pal(0, 1)
     local x, y = peek2(0x5f28) + (64-#text*2), peek2(0x5f2a) + (height or 61)
     rectfill(x-1, y-1, x - 1 + #text*4, y+5, 0)
     color(color_idx)
     print(text, x, y)
+    pal()
 end

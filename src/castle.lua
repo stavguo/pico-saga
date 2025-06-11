@@ -88,7 +88,7 @@ function init_castles(c)
         c[idx] = { team = i == player and "player" or "enemy", units = {} }
         mset(x, y, i == player and 8 or 9)
     end
-        return cursor
+    return cursor
 end
 
 -- Draw the interior of a castle

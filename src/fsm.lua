@@ -1,27 +1,53 @@
 function create_setup_state()
+    local co, step
     return {
         enter = function()
-            local seed, treeseed, _seeds_initialized = flr(rnd(32767)), flr(rnd(32767))
-            if not _seeds_initialized then
-                printh("", "logs/seeds.txt", true)
-                _seeds_initialized = true
+            step = 0
+            co = cocreate(function()
+                local seed, treeseed, _seeds_initialized = flr(rnd(32767)), flr(rnd(32767))
+                if not _seeds_initialized then
+                    printh("", "logs/seeds.txt", true)
+                    _seeds_initialized = true
+                end
+                printh("", "logs/debug.txt", true)
+                printh(
+                    "Generated map with seed: " .. seed .."/" .. treeseed ..
+                    " at " .. stat(93) .. ":" .. stat(94) .. ":" .. stat(95),
+                    "logs/seeds.txt"
+                )
+                -- Initialize terrain and castles
+                local noise_fn, tree_fn = os2d_noisefn(seed), os2d_noisefn(treeseed)
+        
+                init_terrain(noise_fn, tree_fn)
+                local cursor = init_castles(castles)
+                init_player_units(castles[cursor].units)
+                init_enemy_units(castles, units)
+        
+                update_camera(cursor, true)
+                yield()
+                step = 1
+                yield()
+                change_state("phase_change", {cursor=cursor, phase="player"})
+            end)
+            coresume(co)
+        end,
+        update = function()
+            if btnp(5) then coresume(co) end
+        end,
+        draw = function()
+            if step == 0 then
+                print("v1.0", peek2(0x5f28) + 1, peek2(0x5f2a) + 1, 7)
+                sspr( (42 % 16) * 8, (42 \ 16) * 8, 16 * 3, 16, peek2(0x5f28) + 1, peek2(0x5f2a) + 12, 32 * 3, 32)
+                draw_centered_text(t() % 0.5 < 0.4 and "press ❎ to start " or "press    to start", 7, 65)
+                draw_centered_text("a game by stavguo", 7, 120)
+            elseif step == 1 then
+                draw_centered_text("victory:", 12, 36)
+                draw_centered_text("CAPTURE ALL ENEMY CASTLES", 7, 43)
+                draw_centered_text("defeat:", 8, 57)
+                draw_centered_text("STOP THE ENEMY FROM", 7, 64)
+                draw_centered_text("CAPTURING ALL YOUR CASTLES", 7, 71)
+                draw_centered_text(t() % 0.5 < 0.4 and "press ❎ to continue " or "press    to continue", 7, 85)
             end
-            printh("", "logs/debug.txt", true)
-            printh(
-                "Generated map with seed: " .. seed .."/" .. treeseed ..
-                " at " .. stat(93) .. ":" .. stat(94) .. ":" .. stat(95),
-                "logs/seeds.txt"
-            )
-            -- Initialize terrain and castles
-            local noise_fn, tree_fn = os2d_noisefn(seed), os2d_noisefn(treeseed)
-    
-            init_terrain(noise_fn, tree_fn)
-            local cursor = init_castles(castles)
-            init_player_units(castles[cursor].units)
-            init_enemy_units(castles, units)
-    
-            update_camera(cursor, true)
-            change_state("phase_change", {cursor=cursor, phase="player"})
         end
     }
 end
@@ -215,8 +241,10 @@ function create_action_menu_state()
                     selected_unit.exhausted = true
                     if selected_item == "Capture" then
                         flip_castle(c_idx, castles)
+                        change_state("castle_capture", {cursor=cursor,capturer=selected_unit})
+                    else
+                        change_state("overworld", {cursor=cursor})
                     end
-                    change_state("overworld", {cursor=cursor})
                 end
             end
             if btnp(5) then
@@ -608,7 +636,7 @@ function create_game_over()
     return {
         enter = function(p)
             win = p.win
-            go_text = not win and "game over" or "stage clear"
+            go_text = not win and "defeat" or "victory"
             reset_text = "PRESS ANY BUTTON TO RESET"
         end,
         update = function()
