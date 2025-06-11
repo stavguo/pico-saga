@@ -6,15 +6,15 @@ function create_setup_state()
             co = cocreate(function()
                 local seed, treeseed, _seeds_initialized = flr(rnd(32767)), flr(rnd(32767))
                 if not _seeds_initialized then
-                    printh("", "logs/seeds.txt", true)
+                    -- printh("", "logs/seeds.txt", true)
                     _seeds_initialized = true
                 end
-                printh("", "logs/debug.txt", true)
-                printh(
-                    "Generated map with seed: " .. seed .."/" .. treeseed ..
-                    " at " .. stat(93) .. ":" .. stat(94) .. ":" .. stat(95),
-                    "logs/seeds.txt"
-                )
+                -- printh("", "logs/debug.txt", true)
+                -- printh(
+                --     "Generated map with seed: " .. seed .."/" .. treeseed ..
+                --     " at " .. stat(93) .. ":" .. stat(94) .. ":" .. stat(95),
+                --     "logs/seeds.txt"
+                -- )
                 -- Initialize terrain and castles
                 local noise_fn, tree_fn = os2d_noisefn(seed), os2d_noisefn(treeseed)
         
@@ -36,7 +36,7 @@ function create_setup_state()
         end,
         draw = function()
             if step == 0 then
-                print("v1.0", peek2(0x5f28) + 1, peek2(0x5f2a) + 1, 7)
+                print("v0.5.0-alpha", peek2(0x5f28) + 1, peek2(0x5f2a) + 1, 7)
                 sspr( (42 % 16) * 8, (42 \ 16) * 8, 16 * 3, 16, peek2(0x5f28) + 1, peek2(0x5f2a) + 12, 32 * 3, 32)
                 draw_centered_text(t() % 0.5 < 0.4 and "press ❎ to start " or "press    to start", 7, 65)
                 draw_centered_text("a game by stavguo", 7, 120)
