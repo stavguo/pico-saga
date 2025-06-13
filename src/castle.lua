@@ -70,15 +70,33 @@ end
 
 function init_castles(c)
     local sections, actual = {
-        { x_start = 0, x_end = 15, y_start = 0, y_end = 15, targ = {0,0} },
-        { x_start = 16, x_end = 31, y_start = 0, y_end = 15, targ = {31,0} },
-        { x_start = 0, x_end = 15, y_start = 16, y_end = 31, targ = {0,31} },
-        { x_start = 16, x_end = 31, y_start = 16, y_end = 31, targ = {31,31} }
+        -- Row 1 (Top)
+        { x_start = 0,  x_end = 10,  y_start = 0,  y_end = 10,  targ = {5, 5} },   -- Top-Left
+        { x_start = 11, x_end = 20,  y_start = 0,  y_end = 10,  targ = {15, 5} },  -- Top-Middle
+        { x_start = 21, x_end = 31,  y_start = 0,  y_end = 10,  targ = {26, 5} },  -- Top-Right
+
+        -- Row 2 (Middle)
+        { x_start = 0,  x_end = 10,  y_start = 11, y_end = 20,  targ = {5, 15} },  -- Mid-Left
+        { x_start = 11, x_end = 20,  y_start = 11, y_end = 20,  targ = {15, 15} }, -- Center
+        { x_start = 21, x_end = 31,  y_start = 11, y_end = 20,  targ = {26, 15} }, -- Mid-Right
+
+        -- Row 3 (Bottom)
+        { x_start = 0,  x_end = 10,  y_start = 21, y_end = 31,  targ = {5, 26} },  -- Bottom-Left
+        { x_start = 11, x_end = 20,  y_start = 21, y_end = 31,  targ = {15, 26} }, -- Bottom-Middle
+        { x_start = 21, x_end = 31,  y_start = 21, y_end = 31,  targ = {26, 26} }, -- Bottom-Right
+        -- { x_start = 0, x_end = 15, y_start = 0, y_end = 15, targ = {0,0} },
+        -- { x_start = 16, x_end = 31, y_start = 0, y_end = 15, targ = {31,0} },
+        -- { x_start = 0, x_end = 15, y_start = 16, y_end = 31, targ = {0,31} },
+        -- { x_start = 16, x_end = 31, y_start = 16, y_end = 31, targ = {31,31} }
     }, {}
-    for i, sec in ipairs(sections) do
+    for sec in all(sections) do
         local w, h = sec.x_end - sec.x_start + 1, sec.y_end - sec.y_start + 1
         local sq = find_largest_square(sec.x_start, sec.y_start, w, h, sec.targ)
         if sq then add(actual, sq.center) end
+    end
+    if #actual < 2 then
+        change_state("setup")
+        return
     end
     local player, cursor = flr(rnd(#actual)) + 1
     for i, spot in ipairs(actual) do
@@ -124,4 +142,7 @@ function flip_castle(c_idx, castles)
     local pos, current = indextovec(c_idx), castles[c_idx]
     current.team = current.team == "player" and "enemy" or "player"
     mset(pos[1], pos[2], current.team == "player" and 8 or 9)
+    for _,unit in pairs(castles[c_idx].units) do
+        unit.exhausted = false
+    end
 end

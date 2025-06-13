@@ -43,10 +43,10 @@ UNIT_STATS = {
     ["Lance"] = { Sprite = 14, HP = 30, Str = 20, Mag = 0, Skl = 5, Spd = 5, Def = 5, Mdf = 0, Mov = 6, Atr = 1 },
     ["Axe"] = { Sprite = 15, HP = 30, Str = 20, Mag = 0, Skl = 5, Spd = 5, Def = 5, Mdf = 0, Mov = 6, Atr = 1 },
     ["Sword"] = { Sprite = 13, HP = 30, Str = 20, Mag = 0, Skl = 5, Spd = 5, Def = 5, Mdf = 0, Mov = 6, Atr = 1 },
-    ["Archer"] = { HP = 30, Str = 6, Mag = 0, Skl = 5, Spd = 5, Def = 7, Mdf = 0, Mov = 6, Atr = 3 },
-    ["Mage"] = { HP = 26, Str = 0, Mag = 7, Skl = 6, Spd = 6, Def = 1, Mdf = 5, Mov = 5, Atr = 1 },
-    ["Thief"] = { HP = 26, Str = 3, Mag = 0, Skl = 3, Spd = 7, Def = 1, Mdf = 0, Mov = 6, Atr = 1 },
-    ["Monk"] = { HP = 26, Str = 0, Mag = 7, Skl = 6, Spd = 6, Def = 1, Mdf = 7, Mov = 5, Atr = 1  }
+    ["Archer"] = { Sprite = 16, HP = 30, Str = 15, Mag = 0, Skl = 20, Spd = 0, Def = 5, Mdf = 0, Mov = 5, Atr = 3 },
+    ["Mage"] = { Sprite = 17, HP = 20, Str = 0, Mag = 20, Skl = 5, Spd = 2, Def = 0, Mdf = 5, Mov = 4, Atr = 2 },
+    ["Thief"] = { Sprite = 18, HP = 20, Str = 15, Mag = 0, Skl = 10, Spd = 20, Def = 2, Mdf = 0, Mov = 6, Atr = 1 },
+    ["Monk"] = { Sprite = 19, HP = 30, Str = 15, Mag = 0, Skl = 5, Spd = 10, Def = 5, Mdf = 10, Mov = 5, Atr = 1  }
 }
 
 -- Weapon Triangle Matchups
@@ -55,6 +55,16 @@ WEAPON_TRIANGLE = {
     ["Axe"] = {"Lance"},
     ["Lance"] = {"Sword"},
     ["Monk"] = {"Archer", "Mage", "Thief"}
+}
+
+local UNIT_MINS = {
+    {"Lance", 3},
+    {"Axe", 3},
+    {"Sword", 3},
+    {"Archer", 2},
+    {"Mage", 2},
+    {"Thief", 1},
+    {"Monk", 1},
 }
 
 function SHUFFLE(items)

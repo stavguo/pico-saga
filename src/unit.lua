@@ -1,8 +1,7 @@
-function create_unit(x, y, class, team, in_castle, enemy_ai, castle_idx)
+function create_unit(x, y, class, team, enemy_ai, exhausted)
     return {
         x = x,
         y = y,
-        in_castle = in_castle,
         sprite = UNIT_STATS[class].Sprite,
         team = team,
         class = class,
@@ -16,9 +15,27 @@ function create_unit(x, y, class, team, in_castle, enemy_ai, castle_idx)
         Mov = UNIT_STATS[class].Mov,
         Atr = UNIT_STATS[class].Atr,
         enemy_ai = enemy_ai,
-        castle_idx = castle_idx,
-        exhausted = false
+        exhausted = exhausted
     }
+end
+
+function generate_units(total_units)
+    -- Create base units list with guaranteed counts
+    local units = {}
+    for _,v in pairs(UNIT_MINS) do
+      for i=1,v[2] do
+        add(units, v[1])
+      end
+    end
+
+    -- Distribute remaining units randomly
+    for i=1,total_units - #units do
+        local r = flr(rnd(#UNIT_MINS)) + 1
+        add(units, UNIT_MINS[r][1])
+    end
+
+    SHUFFLE(units)
+    return units
 end
 
 function move_unit(u, old_idx, new_idx)
@@ -48,29 +65,25 @@ function get_neighbors(idx,f)
     return n
 end
 
-function init_player_units(units)
-    local player_classes = {
-        "Sword", "Sword", "Sword",
-        "Lance", "Lance", "Lance",
-        "Axe", "Axe", "Axe"
-    }
-    local leader_idx = flr(rnd(9)) + 1
-    -- Place leader
-    local throne = rnd(1) < 0.5 and 7 or 8
-    
-    units[vectoindex({throne,1})] = create_unit(throne, 1, player_classes[leader_idx], "player", true)
+function init_player_units(castles, cursor)
+    local player_classes, actual = generate_units(42), 1
 
-    -- Place 8 units in formation
-    local counter = 0
-    for i = 1, 9 do
-        if i ~= leader_idx then
-            local row = (counter \ 4)
-            local pos = counter % 4
+    for i, castle in pairs(castles) do
+        -- Place leader
+        if i == cursor then
+            local throne = rnd(1) < 0.5 and 7 or 8
+            castle.units[vectoindex({throne,1})] = create_unit(throne, 1, player_classes[actual], "player", nil, false)
+            actual += 1
+        end
+
+        -- Place units in formation
+        for j = 0, (i == cursor and 7 or 3) do
+            local row, pos = j \ 4, j % 4
             local is_right = pos >= 2
             local x = is_right and (11 + (pos - 2) * 2) or (2 + pos * 2)
             local y = 2 + row * 2
-            units[vectoindex({x,y})] = create_unit(x, y, player_classes[i], "player", true)
-            counter = counter + 1
+            castle.units[vectoindex({x,y})] = create_unit(x, y, player_classes[actual], "player", nil, (i ~= cursor and true or false))
+            actual += 1
         end
     end
 end
@@ -91,7 +104,7 @@ function init_enemy_units(castles, units)
             SHUFFLE(filtered_tiles)
 
             -- Calculate the number of units to place around this castle
-            for i = 1, 4 do
+            for i = 1, 3 do
 
                 -- Get a random tile from the shuffled list
                 if i <= #filtered_tiles then
@@ -102,11 +115,9 @@ function init_enemy_units(castles, units)
                     units[tileIdx] = create_unit(
                         pos[1],
                         pos[2],
-                        ({'Sword','Lance','Axe'})[flr(rnd(3))+1],
+                        UNIT_MINS[flr(rnd(#UNIT_MINS))+1][1],
                         "enemy",
-                        false,
-                        ({"Charge","Range","Range2"})[flr(rnd(3))+1],
-                        castle_idx)
+                        ({"Charge","Range","Range2"})[flr(rnd(3))+1])
                 end
             end
         end
@@ -184,9 +195,9 @@ function draw_unit_at(unit, map_idx, flashing)
     if not flashing or t() % 0.5 < 0.4 then
         -- Apply palette changes
         if unit.exhausted and unit.team == "player" then
-            pal(12, 1)  -- Change palette for exhausted player units
-            pal(1, 1)
-            pal(10, 1)
+            for col in all({14, 12, 10, 2}) do
+                pal(col, 1) -- Change palette for exhausted player units
+            end
         end
             
         if unit.team == "enemy" then

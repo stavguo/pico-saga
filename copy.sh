@@ -1,31 +1,31 @@
 #!/bin/bash
 
-# Directory to process
-dir="src"
-
-# Check if the directory exists
-if [ ! -d "$dir" ]; then
-  echo "Directory $dir does not exist!"
-  exit 1
-fi
+# Directories to process
+directories=("src" "lib")
 
 # Variable to store all file contents
 all_contents=""
 
-# Loop through all files in the directory
-for file in "$dir"/*; do
-  # Check if it's a file (not a directory)
-  if [ -f "$file" ]; then
-    # Get the filename with extension
-    filename=$(basename "$file")
-    
-    # Prepend the filename and append the file contents
-    all_contents+="-- File: $filename\n"
-    all_contents+="$(cat "$file")\n\n"
+# Process each directory
+for dir in "${directories[@]}"; do
+  # Check if directory exists (skip if missing)
+  if [ ! -d "$dir" ]; then
+    continue
   fi
+
+  # Loop through all files in the directory
+  for file in "$dir"/*; do
+    # Only process files (not directories)
+    if [ -f "$file" ]; then
+      # Get filename and append contents
+      filename=$(basename "$file")
+      all_contents+="-- File: $filename\n"
+      all_contents+="$(cat "$file")\n\n"
+    fi
+  done
 done
 
-# Copy the accumulated contents to the clipboard
+# Copy to clipboard (with -e to interpret newlines)
 echo "$all_contents" | pbcopy
 
 echo "All file contents have been copied to the clipboard!"

@@ -20,7 +20,7 @@ function create_setup_state()
         
                 init_terrain(noise_fn, tree_fn)
                 local cursor = init_castles(castles)
-                init_player_units(castles[cursor].units)
+                init_player_units(castles, cursor)
                 init_enemy_units(castles, units)
         
                 update_camera(cursor, true)
@@ -39,10 +39,10 @@ function create_setup_state()
                 print("v0.5.0-alpha", peek2(0x5f28) + 1, peek2(0x5f2a) + 1, 7)
                 sspr( (42 % 16) * 8, (42 \ 16) * 8, 16 * 3, 16, peek2(0x5f28) + 1, peek2(0x5f2a) + 12, 32 * 3, 32)
                 draw_centered_text(t() % 0.5 < 0.4 and "press ❎ to start " or "press    to start", 7, 65)
-                draw_centered_text("a game by stavguo", 7, 120)
+                draw_centered_text("★ 2025, stavguo ", 7, 120)
             elseif step == 1 then
                 draw_centered_text("victory:", 12, 36)
-                draw_centered_text("CAPTURE ALL ENEMY CASTLES", 7, 43)
+                draw_centered_text("LIBERATE ALL ENEMY CASTLES", 7, 43)
                 draw_centered_text("defeat:", 8, 57)
                 draw_centered_text("STOP THE ENEMY FROM", 7, 64)
                 draw_centered_text("CAPTURING ALL YOUR CASTLES", 7, 71)
@@ -87,7 +87,7 @@ function create_overworld_state()
             if btnp(4) then
                 ui = {}
                 local castle, unit = castles[cursor], units[cursor]
-                if castle and castle.team == "player" then
+                if castle then
                     change_state("castle", {castle=castle, pos=cursor, ov_cam={ peek2(0x5f28), peek2(0x5f2a) }})
                 elseif unit then
                     selected_unit = unit
@@ -227,7 +227,7 @@ function create_action_menu_state()
             c_idx=check_for_castle(cursor)
             local opts={}
             if next(enemy_positions) then add(opts,"Attack") end
-            add(opts,c_idx and "Capture" or "Standby")
+            add(opts,c_idx and "Liberate" or "Standby")
             create_ui(opts,ui,true)
         end,
         update = function()
@@ -236,10 +236,10 @@ function create_action_menu_state()
                 local selected_item = get_ui_selection(ui)
                 if selected_item == "Attack" then
                     change_state("attack_menu", { start = cursor, unit = selected_unit, enemy_positions = enemy_positions })
-                elseif selected_item == "Standby" or selected_item == "Capture" then
+                elseif selected_item == "Standby" or selected_item == "Liberate" then
                     move_unit(selected_unit, start, cursor)
                     selected_unit.exhausted = true
-                    if selected_item == "Capture" then
+                    if selected_item == "Liberate" then
                         flip_castle(c_idx, castles)
                         change_state("castle_capture", {cursor=cursor,capturer=selected_unit})
                     else
@@ -281,13 +281,13 @@ function create_attack_menu_state()
                     att.team.." "..att.class,
                     "HP:"..att.HP,
                     "Dmg:"..calculate_damage(att, def),
-                    "Hit:"..hit_chance(att.Skl, def.Spd, start).."%"
+                    "Hit:"..hit_chance(att.Skl, def.Spd, cursor).."%"
                 }, ui, false, top and "bl" or "tl")
                 create_ui({
                     def.team.." "..def.class,
                     "HP:"..def.HP,
                     "Dmg:"..calculate_damage(def, att),
-                    "Hit:"..hit_chance(def.Skl, att.Spd, cursor).."%"
+                    "Hit:"..hit_chance(def.Skl, att.Spd, start).."%"
                 }, ui, false, top and "br" or "tr")
 
                 if btnp(4) then  -- Select button
@@ -358,8 +358,8 @@ function create_combat_state()
                 -- Main combat flow
                 local hit, broken = process_attack(attacker, defender, false)
                 
-                -- Counterattack if applicable
-                if defender.HP > 0 and (not hit or not broken) then
+                -- Counterattack if possible
+                if defender.Atr >= man_dist({defender.x,defender.y},{attacker.x,attacker.y}) and defender.HP > 0 and (not hit or not broken) then
                     process_attack(defender, attacker, true)
                 end
                 
@@ -571,7 +571,8 @@ function create_phase_change()
             draw_units(units)
             draw_centered_text(
                 (phase == "enemy") and "Enemy Phase" or "Player Phase",
-                (phase == "enemy") and 8 or 12
+                (phase == "enemy") and 8 or 12,
+                8
             )
         end
     }
@@ -583,7 +584,7 @@ function create_castle_capture_state()
         enter = function(p)
             cursor, capturer, ui = p.cursor, p.capturer, {}
             local msg = {
-                capturer.team.." "..capturer.class.." ".."captured",
+                capturer.team.." "..capturer.class.." ".."liberated",
                 (capturer.team == "player" and "enemy" or "player").." castle!"
             }
             create_ui(msg, ui, false)
