@@ -69,7 +69,7 @@ function create_overworld_state()
                         change_state("move_unit", {unit=selected_unit, cursor=cursor, start=cursor})
                     end
                 else
-                    cursor, ui = update_cursor(cursor, 31, 31), {}
+                    cursor, ui = update_cursor(cursor, MAP_W - 1, MAP_W - 1), {}
                 end
             end
     
@@ -189,7 +189,7 @@ function create_move_state()
         update = function()
             local old_cursor = cursor
         
-            cursor = update_cursor(cursor, 31, 31)
+            cursor = update_cursor(cursor, MAP_W - 1, MAP_W - 1)
         
             if not traversable_tiles[cursor] then
                 cursor = old_cursor
@@ -201,7 +201,7 @@ function create_move_state()
             if btnp(4) then
                 local unit_at_tile = units[cursor]
                 if map_get(cursor) < 6 and not unit_at_tile or unit_at_tile == selected_unit then
-                    change_state("action_menu", {unit=selected_unit, cursor=cursor})
+                    change_state("action_menu", {unit=selected_unit, cursor=cursor, start=start})
                 end
             elseif btnp(5) then
                 change_state("overworld", {cursor=cursor})
@@ -219,7 +219,7 @@ function create_action_menu_state()
     local ui, cursor, selected_unit, start, enemy_positions, c_idx
     return {
         enter = function(p)
-            selected_unit, cursor, start, ui = p.unit, p.cursor, p.cursor, {}
+            selected_unit, cursor, start, ui = p.unit, p.cursor, p.start, {}
             enemy_positions = get_tiles_within_distance(cursor, selected_unit.Atr, function (idx)
                 local unit = units[idx]
                 return unit and unit.team == "enemy"
@@ -271,7 +271,7 @@ function create_attack_menu_state()
         update = function()
             ui = {}
 
-            cursor = update_cursor(cursor, 31, 31)
+            cursor = update_cursor(cursor, MAP_W - 1, MAP_W - 1)
             update_camera(cursor)
 
             if attackable_units[cursor] then

@@ -70,20 +70,20 @@ end
 
 function init_castles(c)
     local sections, actual = {
-        -- Row 1 (Top)
-        { x_start = 0,  x_end = 10,  y_start = 0,  y_end = 10,  targ = {5, 5} },   -- Top-Left
-        { x_start = 11, x_end = 20,  y_start = 0,  y_end = 10,  targ = {15, 5} },  -- Top-Middle
-        { x_start = 21, x_end = 31,  y_start = 0,  y_end = 10,  targ = {26, 5} },  -- Top-Right
-
-        -- Row 2 (Middle)
-        { x_start = 0,  x_end = 10,  y_start = 11, y_end = 20,  targ = {5, 15} },  -- Mid-Left
-        { x_start = 11, x_end = 20,  y_start = 11, y_end = 20,  targ = {15, 15} }, -- Center
-        { x_start = 21, x_end = 31,  y_start = 11, y_end = 20,  targ = {26, 15} }, -- Mid-Right
-
-        -- Row 3 (Bottom)
-        { x_start = 0,  x_end = 10,  y_start = 21, y_end = 31,  targ = {5, 26} },  -- Bottom-Left
-        { x_start = 11, x_end = 20,  y_start = 21, y_end = 31,  targ = {15, 26} }, -- Bottom-Middle
-        { x_start = 21, x_end = 31,  y_start = 21, y_end = 31,  targ = {26, 26} }, -- Bottom-Right
+        -- Top row (y: 0-4)
+        {x_start=0, x_end=4, y_start=0, y_end=4, targ={2, 2}},    -- Top-left
+        {x_start=5, x_end=10, y_start=0, y_end=4, targ={7, 2}},   -- Top-center
+        {x_start=11, x_end=15, y_start=0, y_end=4, targ={13, 2}}, -- Top-right
+        
+        -- Middle row (y: 5-10)
+        {x_start=0, x_end=4, y_start=5, y_end=10, targ={2, 7}},    -- Mid-left
+        {x_start=5, x_end=10, y_start=5, y_end=10, targ={7, 7}},  -- Center
+        {x_start=11, x_end=15, y_start=5, y_end=10, targ={13, 7}},-- Mid-right
+        
+        -- Bottom row (y: 11-15)
+        {x_start=0, x_end=4, y_start=11, y_end=15, targ={2, 13}},  -- Bottom-left
+        {x_start=5, x_end=10, y_start=11, y_end=15, targ={7, 13}},-- Bottom-center
+        {x_start=11, x_end=15, y_start=11, y_end=15, targ={13, 13}}-- Bottom-right
         -- { x_start = 0, x_end = 15, y_start = 0, y_end = 15, targ = {0,0} },
         -- { x_start = 16, x_end = 31, y_start = 0, y_end = 15, targ = {31,0} },
         -- { x_start = 0, x_end = 15, y_start = 16, y_end = 31, targ = {0,31} },

@@ -1,9 +1,11 @@
+MAP_W = 16
+
 TERRAIN_TYPES = {
     [1] = "plains", -- PLAINS
     [2] = "shoal" , -- SHOAL
     [3] = "forest" , -- FOREST
     [4] = "thicket" , -- THICKET
-    [5] = "sand" , -- SAND
+    [5] = "road" , -- ROAD
     [6] = "sea", -- Sea
     [7] = "cliff", -- Mountain
 }
@@ -13,7 +15,7 @@ TERRAIN_COSTS = {
     [3] = 2 , -- FOREST
     [4] = 4 , -- THICKET
     [2] = 4 , -- SHOAL
-    [5] = 2 , -- SAND
+    [5] = 0.5 , -- ROAD
 }
 
 -- Terrain Effects on Hit Rate
@@ -21,22 +23,24 @@ TERRAIN_EFFECTS = {
     [3] = 20, -- Forest
     [4] = 30, -- Thicket
     [2] = 10,  -- Shoal
-    [5] = 5,  -- Sand
+    [5] = -10,  -- Road
     [6] = 20, -- Sea
     [7] = 20, -- Mountain
 }
 
 LAYERS = {
-    { 1 / 16, 1 },
-    { 1 / 8,  1 / 2 },
-    { 1 / 4,  1 / 4 },
-    { 1 / 2,  1 / 8 }
+    -- { 1 / 16, 1 },
+    { 1 / 8,  1 },
+    { 1 / 4,  1 / 2 },
+    { 1 / 2,  1 / 4 },
+    { 1 ,  1 / 8 }
 }
 
 TREE_LAYERS = {
     --{ 1 / 8,  1 },
     { 1 / 4,  1 },
-    { 1 / 2,  1 / 2 }
+    { 1 / 2,  1 / 2 },
+    { 1 ,  1 / 4 }
 }
 
 UNIT_STATS = {
@@ -104,12 +108,12 @@ end
 
 -- translate a 2d x,y coordinate to a 1d index and back again
 function vectoindex(vec)
-    return vec[2] * 32 + vec[1] + 1
+    return vec[2] * MAP_W + vec[1] + 1
 end
 
 function indextovec(index)
     local i = index - 1
-    local x, y = i % 32, i \ 32
+    local x, y = i % MAP_W, i \ MAP_W
     return {x,y}
 end
 

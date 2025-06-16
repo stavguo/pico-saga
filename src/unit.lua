@@ -55,7 +55,7 @@ function get_neighbors(idx,f)
 
     for i=1,#d do
         local x,y=v[1]+d[i][1],v[2]+d[i][2]
-        if x>=0 and x<32 and y>=0 and y<32 then
+        if x>=0 and x<MAP_W and y>=0 and y<MAP_W then
             local ni=vectoindex({x,y})
             if not f or f(ni) then add(n,ni) end
         end
@@ -129,7 +129,7 @@ function get_tiles_within_distance(tile_idx, max_distance, filter_func)
     for x = start[1] - max_distance, start[1] + max_distance do
         for y = start[2] - max_distance, start[2] + max_distance do
             -- Check if the tile is within bounds (0,0 to 31,31)
-            if x >= 0 and x < 32 and y >= 0 and y < 32 then
+            if x >= 0 and x < MAP_W and y >= 0 and y < MAP_W then
                 -- Calculate Manhattan distance
                 local distance = abs(x - start[1]) + abs(y - start[2])
                 -- Add to result if within max_distance
@@ -224,7 +224,7 @@ function sort_enemy_turn_order(units)
     
     for _,unit in pairs(units) do
         if unit.team == "enemy" and not unit.exhausted then
-            local priority = -(unit.y * 32 + unit.x)
+            local priority = -(unit.y * MAP_W + unit.x)
             insert(sorted_enemies, unit, priority)
         end
     end

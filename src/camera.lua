@@ -8,7 +8,7 @@ function update_camera(cursor_idx, snap)
     if (csy < dt) cam_y = (cursor_pos[2] - dt) * 8
     if (csy > db) cam_y = (cursor_pos[2] - db) * 8
     -- Clamp camera to map boundaries
-    cam_x, cam_y = mid(0, cam_x, 128), mid(0, cam_y, 128)
+    cam_x, cam_y = mid(0, cam_x, 0), mid(0, cam_y, 0)
     if snap then
         camera(cam_x, cam_y)
     else
