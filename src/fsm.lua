@@ -3,25 +3,25 @@ function create_setup_state()
     return {
         enter = function()
             step = 0
+            local seed, treeseed, _seeds_initialized = flr(rnd(32767)), flr(rnd(32767))
+            if not _seeds_initialized then
+                -- printh("", "logs/seeds.txt", true)
+                _seeds_initialized = true
+            end
+            printh("", "logs/debug.txt", true)
+            -- printh(
+            --     "Generated map with seed: " .. seed .."/" .. treeseed ..
+            --     " at " .. stat(93) .. ":" .. stat(94) .. ":" .. stat(95),
+            --     "logs/seeds.txt"
+            -- )
+            -- Initialize terrain and castles
+            local noise_fn, tree_fn = os2d_noisefn(seed), os2d_noisefn(treeseed)
+    
+            init_terrain(noise_fn, tree_fn)
+            local cursor = init_castles(castles)
+            init_player_units(castles, cursor)
+            -- init_enemy_units(castles, units)
             co = cocreate(function()
-                local seed, treeseed, _seeds_initialized = flr(rnd(32767)), flr(rnd(32767))
-                if not _seeds_initialized then
-                    -- printh("", "logs/seeds.txt", true)
-                    _seeds_initialized = true
-                end
-                -- printh("", "logs/debug.txt", true)
-                -- printh(
-                --     "Generated map with seed: " .. seed .."/" .. treeseed ..
-                --     " at " .. stat(93) .. ":" .. stat(94) .. ":" .. stat(95),
-                --     "logs/seeds.txt"
-                -- )
-                -- Initialize terrain and castles
-                local noise_fn, tree_fn = os2d_noisefn(seed), os2d_noisefn(treeseed)
-        
-                init_terrain(noise_fn, tree_fn)
-                local cursor = init_castles(castles)
-                init_player_units(castles, cursor)
-                init_enemy_units(castles, units)
         
                 update_camera(cursor, true)
                 yield()
@@ -483,7 +483,7 @@ function create_enemy_phase()
                         return (u == nil or u.team == current_enemy.team) and map_get(pos) < 6
                     end)
                     if path then
-                        cam_path = generate_full_path(cursor, {current_enemy.x, current_enemy.y})
+                        cam_path = generate_full_path(indextovec(cursor), {current_enemy.x, current_enemy.y})
                         
                         -- Start animation coroutine
                         anim_co = cocreate(function()

@@ -39,7 +39,7 @@ end
 function _draw()
     cls()
     map()
-    draw_side_bars()
+    -- draw_side_bars()
     if states[current_state].draw then
         states[current_state].draw()
     end

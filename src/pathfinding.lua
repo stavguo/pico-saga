@@ -116,7 +116,6 @@ function reconstruct_path(prev, target_key)
 end
 
 function generate_full_path(start, goal)
-    start = indextovec(start)
     local path, dx, dy = {}, goal[1] - start[1], goal[2] - start[2]
     if abs(dx) > abs(dy) then
         for x = start[1], goal[1], dx > 0 and 1 or -1 do
