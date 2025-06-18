@@ -21,31 +21,31 @@ end
 
 function generate_units(total_units)
     -- Create base units list with guaranteed counts
-    local units = {}
+    local types = {}
     for _,v in pairs(UNIT_MINS) do
       for i=1,v[2] do
-        add(units, v[1])
+        add(types, v[1])
       end
     end
 
     -- Distribute remaining units randomly
-    for i=1,total_units - #units do
+    for i=1,total_units - #types do
         local r = flr(rnd(#UNIT_MINS)) + 1
-        add(units, UNIT_MINS[r][1])
+        add(types, UNIT_MINS[r][1])
     end
 
-    SHUFFLE(units)
-    return units
+    SHUFFLE(types)
+    return types
 end
 
-function move_unit(u, old_idx, new_idx)
-    if castles[old_idx] then
-        castles[old_idx].units[vectoindex({u.x,u.y})]=nil
+function move_unit(u, new_idx, old_idx)
+    if CASTLES[old_idx] then
+        CASTLES[old_idx].units[vectoindex({u.x,u.y})]=nil
     else
-        units[vectoindex({u.x,u.y})]=nil
+        UNITS[vectoindex({u.x,u.y})]=nil
     end
     u.x,u.y=unpack(indextovec(new_idx))
-    units[new_idx]=u
+    UNITS[new_idx]=u
 end
 
 function get_neighbors(idx,f)
@@ -65,10 +65,10 @@ function get_neighbors(idx,f)
     return n
 end
 
-function init_player_units(castles, cursor)
+function init_player_units(cursor)
     local player_classes, actual = generate_units(42), 1
 
-    for i, castle in pairs(castles) do
+    for i, castle in pairs(CASTLES) do
         -- Place leader
         if i == cursor then
             local throne = rnd(1) < 0.5 and 7 or 8
@@ -88,8 +88,8 @@ function init_player_units(castles, cursor)
     end
 end
 
-function init_enemy_units(castles, units)
-    for castle_idx, castle in pairs(castles) do
+function init_enemy_units()
+    for castle_idx, castle in pairs(CASTLES) do
         if castle.team == "enemy" then  -- Only place units around enemy castles
             -- Find traversable tiles around the castle within the specified movement distance
             local traversable_tiles = find_traversable_tiles(castle_idx, 4)
@@ -104,7 +104,7 @@ function init_enemy_units(castles, units)
             SHUFFLE(filtered_tiles)
 
             -- Calculate the number of units to place around this castle
-            for i = 1, 3 do
+            for i = 1, 2 do
 
                 -- Get a random tile from the shuffled list
                 if i <= #filtered_tiles then
@@ -112,7 +112,7 @@ function init_enemy_units(castles, units)
                     local pos = indextovec(tileIdx)
 
                     -- Create the unit at the selected position
-                    units[tileIdx] = create_unit(
+                    UNITS[tileIdx] = create_unit(
                         pos[1],
                         pos[2],
                         UNIT_MINS[flr(rnd(#UNIT_MINS))+1][1],
@@ -178,8 +178,8 @@ function is_attacker_advantage(attacker, defender)
     return false  -- No advantage, defender can counterattack
 end
 
-function draw_units(units, filter, flashing)
-    for _, unit in pairs(units) do
+function draw_units(filter, flashing, units)
+    for _, unit in pairs(units or UNITS) do
         if not filter or filter(unit) then
             draw_unit_at(unit, nil, flashing)
         end
@@ -214,15 +214,15 @@ function draw_unit_at(unit, map_idx, flashing)
 end
 
 function draw_nonselected_overworld_units(selected)
-    draw_units(units, function (unit)
+    draw_units(function (unit)
         return unit ~= selected
     end)
 end
 
-function sort_enemy_turn_order(units)
+function sort_enemy_turn_order()
     local sorted_enemies = {}
     
-    for _,unit in pairs(units) do
+    for _,unit in pairs(UNITS) do
         if unit.team == "enemy" and not unit.exhausted then
             local priority = -(unit.y * MAP_W + unit.x)
             insert(sorted_enemies, unit, priority)

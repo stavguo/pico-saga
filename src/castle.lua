@@ -5,7 +5,7 @@ function find_largest_square(start_x, start_y, width, height, targ)
         dp[y] = 0
     end
 
-    local max_size, candidates, diagonal = 3, {}, 0
+    local max_size, candidates, diagonal = 2, {}, 0
 
     -- Process column by column from right to left
     for x = width - 1, 0, -1 do
@@ -68,7 +68,7 @@ function get_square_center(top_left, size, targ)
     return candidates[#candidates][1]  -- closest center
 end
 
-function init_castles(c)
+function init_castles()
     local sections, actual = {
         -- Top row (y: 0-4)
         {x_start=0, x_end=4, y_start=0, y_end=4, targ={0, 0}},    -- Top-left
@@ -92,30 +92,139 @@ function init_castles(c)
     for sec in all(sections) do
         local w, h = sec.x_end - sec.x_start + 1, sec.y_end - sec.y_start + 1
         local sq = find_largest_square(sec.x_start, sec.y_start, w, h, sec.targ)
-        if sq then add(actual, sq.center) end
+        if sq then add(actual, vectoindex(sq.center)) end
     end
     if #actual < 2 then
+        printh("NEED TO RESET")
         change_state("setup")
-        return
+        --return
     end
+    make_routes(actual)
     local player, cursor = flr(rnd(#actual)) + 1
-    local clusters = k_medians_cluster(2, actual)
-    printh("clusters count at end "..#clusters, "logs/debug.txt")
-    for i, cluster in ipairs(clusters) do
-        printh("final cluster "..i, "logs/debug.txt")
-        for j, point in ipairs(cluster) do
-            printh("point "..j.." = {"..point[1]..","..point[2].."}", "logs/debug.txt")
-        end
-    end
-    routes(clusters)
-    for i, spot in ipairs(actual) do
-        local x, y = unpack(spot)
-        local idx = vectoindex(spot)
+    for i, idx in ipairs(actual) do
+        local x, y = unpack(indextovec(idx))
+        printh("creating castle at "..idx, "logs/debug.txt")
         if (i == player) cursor = idx
-        c[idx] = { team = i == player and "player" or "enemy", units = {} }
+        CASTLES[idx] = { team = i == player and "player" or "enemy", units = {} }
         mset(x, y, i == player and 8 or 9)
     end
     return cursor
+end
+
+function generate_edges(vertices)
+    local edges = {}
+    for i=1,#vertices-1 do
+        for j=i+1,#vertices do
+            local goal, start, cost = vertices[j], vertices[i], 0
+            local path = generate_full_path(indextovec(start), indextovec(goal))
+            -- for k=1,#path-1 do
+            --     cost += TERRAIN_COSTS[mget(path[k][1],path[k][2])]
+            -- end
+            insert(edges, {start, goal}, #path)
+        end
+    end
+    return edges
+end
+
+function dsu_new(V)
+    local dsu = {
+        parent = {},
+        rank = {}
+    }
+    for v in all(V) do
+        dsu.parent[v], dsu.rank[v] = v, 1
+    end
+    return dsu
+end
+  
+function dsu_find(dsu, i)
+    if dsu.parent[i] ~= i then
+        dsu.parent[i] = dsu_find(dsu, dsu.parent[i])
+    end
+    return dsu.parent[i]
+end
+  
+function dsu_union(dsu, x, y)
+    local s1 = dsu_find(dsu, x)
+    local s2 = dsu_find(dsu, y)
+    if s1 ~= s2 then
+        if dsu.rank[s1] < dsu.rank[s2] then
+            dsu.parent[s1] = s2
+        elseif dsu.rank[s1] > dsu.rank[s2] then
+            dsu.parent[s2] = s1
+        else
+            dsu.parent[s2] = s1
+            dsu.rank[s1] = dsu.rank[s1] + 1
+        end
+        return true  -- Indicate a successful union
+    end
+    return false  -- Indicate no union was performed
+end
+
+function kruskals(V)
+    printh("kruskals_mst()", "logs/debug.txt")
+    -- Sort all edges using our insert function
+    local sorted_edges = generate_edges(V)
+
+    -- Initialize DSU and result collection
+    local dsu, mst_edges, count = dsu_new(V), {}, 0
+
+    for i = #sorted_edges, 0, -1 do
+        local edge = sorted_edges[i]
+        local x, y = edge[1][1], edge[1][2]
+        printh("edge {"..x..","..y.."} has weight "..edge[2], "logs/debug.txt")
+        
+        -- Only add edge if it doesn't form a cycle
+        if dsu_find(dsu, x) ~= dsu_find(dsu, y) then
+            dsu_union(dsu, x, y)
+            add(mst_edges, {x, y})  -- Store the edge
+            local vx, vy = indextovec(x), indextovec(y)
+            printh("adding {"..vx[1]..","..vx[2].."} -> {"..vy[1]..","..vy[2].."} to MST", "logs/debug.txt")
+            count += 1
+            if count == #V - 1 then
+                break  -- MST is complete
+            end
+        end
+    end
+
+    local l_edge = sorted_edges[1]
+    local lx, ly = indextovec(l_edge[1][1]), indextovec(l_edge[1][2])
+    printh("Longest edge was {"..lx[1]..","..lx[2].."} -> {"..ly[1]..","..ly[2].."}", "logs/debug.txt")
+
+    return mst_edges
+end
+
+function make_routes(V)
+    for edge in all(kruskals(V)) do
+        local path = generate_full_path(indextovec(edge[1]),indextovec(edge[2]))
+        for i = 1, #path -1 do
+            local tile, next_tile = path[i], path[i + 1]
+            local tx, ty, nx, ny = tile[1], tile[2], next_tile[1], next_tile[2]
+            local dx, dy = nx - tx, ny - ty
+            local spr = abs(dx) > abs(dy) and 13 or 14
+            local has_north, has_south, has_east, has_west = false, false, false, false
+            local ns = get_tiles_within_distance(vectoindex(tile), 1, function (idx)
+                return map_get(idx) == 2 or map_get(idx) == 6
+            end)
+            for idx in all(ns) do
+                local vec = indextovec(idx)
+                if vec[1] == tx then
+                    -- Vertical neighbor (N or S)
+                    if vec[2] < ty then has_north = true
+                    elseif vec[2] > ty then has_south = true end
+                elseif vec[2] == ty then
+                    -- Horizontal neighbor (E or W)
+                    if vec[1] > tx then has_east = true
+                    elseif vec[1] < tx then has_west = true end
+                end
+            end
+            if (has_north and has_south) or (has_east and has_west) then
+                mset(tx, ty, spr)
+            else
+                mset(tx, ty, 5)
+            end
+        end
+    end
 end
 
 -- Draw the interior of a castle
@@ -147,139 +256,11 @@ function check_for_castle(t_idx, is_enemy_turn)
     return #adj_tiles > 0 and adj_tiles[1] or nil
 end
 
-function flip_castle(c_idx, castles)
-    local pos, current = indextovec(c_idx), castles[c_idx]
+function flip_castle(c_idx)
+    local pos, current = indextovec(c_idx), CASTLES[c_idx]
     current.team = current.team == "player" and "enemy" or "player"
     mset(pos[1], pos[2], current.team == "player" and 8 or 9)
-    for _,unit in pairs(castles[c_idx].units) do
+    for _,unit in pairs(CASTLES[c_idx].units) do
         unit.exhausted = false
     end
-end
-
-function k_medians_cluster(k, points, max_iter)
-    printh("Entering k_medians_cluster()", "logs/debug.txt")
-    printh("Initializing centroids:", "logs/debug.txt")
-    -- Choose k centroids (Forgy) and initialize clusters list
-    local centroids, clusters = {}
-    SHUFFLE(points)
-    for i = 1, k do
-        printh("centroid "..i.." = {"..points[i][1]..","..points[i][2].."}", "logs/debug.txt")
-        add(centroids, points[i])
-    end
-    
-    printh("Looping until convergence or 100:", "logs/debug.txt")
-    -- Loop until convergence
-    for i = 1, max_iter or 100 do
-        printh("Iteration "..i, "logs/debug.txt")
-        -- Clear previous clusters
-        local clusters = {}
-        for y = 1, k do
-            clusters[y] = {}
-        end
-    
-        -- Assign each point to the "closest" centroid 
-        for j, point in ipairs(points) do
-            local distances = {}
-            for k, centroid in ipairs(centroids) do
-                insert(distances, k, man_dist(point, centroid))
-            end
-            add(clusters[distances[#distances][1]], point)
-            printh("point "..j.." = {"..point[1]..","..point[2].."} is closer to centroid "..distances[#distances][1], "logs/debug.txt")
-        end
-        -- Calculate new centroids
-        --   (the standard implementation uses the mean of all points in a
-        --     cluster to determine the new centroid)
-        printh("Calculating new centroids", "logs/debug.txt")
-        local new_centroids = {}
-        for j, cluster in ipairs(clusters) do
-            printh("cluster "..j.." has "..#cluster.." points.", "logs/debug.txt")
-            local med = calculate_median(cluster)
-            printh("new centroid at {"..med[1]..","..med[2].."}", "logs/debug.txt")
-            add(new_centroids, med)
-        end 
-        
-        local should_break = true
-        for j = 1, #centroids do
-            if centroids[j][1] != new_centroids[j][1] or centroids[j][2] != new_centroids[j][2] then
-                should_break = false
-            end
-        end
-        if should_break then
-            return clusters
-        end
-        centroids = new_centroids
-    end
-    return clusters
-end
-
-function calculate_median(points)
-    -- Separate x and y coordinates
-    local xs, ys = {}, {}
-    for p in all(points) do
-        insert(xs, p[1], p[1])
-        insert(ys, p[2], p[2])
-    end
-    
-    -- Find median
-    local mid, median_x, median_y = flr(#xs/2)+1
-    printh("mid is "..mid, "logs/debug.txt")
-    
-    if #xs % 2 == 1 then
-        median_x = xs[mid][1]
-        median_y = ys[mid][1]
-    else
-        median_x = (xs[mid-1][1] + xs[mid][1]) \ 2
-        median_y = (ys[mid-1][1] + ys[mid][1]) \ 2
-    end
-    
-    return {median_x, median_y}
-end
-
-function routes(clusters)
-    printh("finding routes", "logs/debug.txt")
-    local r,t,d={},{},99
-    for i, c in ipairs(clusters) do
-        printh("cluster i = "..i, "logs/debug.txt")
-        -- Intra-cluster
-        for p in all(c) do
-            printh("point p = {"..p[1]..","..p[2].."}", "logs/debug.txt")
-            if not t[vectoindex(p)] then
-                t[vectoindex(p)]=true
-                local n,b=99
-                for q in all(c) do
-                    if p~=q and not t[vectoindex(q)] then
-                        a=man_dist(p,q)
-                        if a<n then n,b=a,q end
-                    end
-                end
-                if b then
-                    printh("closest point 'b' is = {"..b[1]..","..b[2].."}", "logs/debug.txt")
-                    -- render path
-                    for tile in all(generate_full_path(p,b)) do
-                        local water = get_tiles_within_distance(vectoindex(tile), 1, function (idx)
-                            return map_get(idx) == 2 or map_get(idx) == 6
-                        end)
-                        mset(tile[1], tile[2], (#water > 1) and 13 or 5)
-                        for adj in all(get_tiles_within_distance(vectoindex(tile), 1, function (idx)
-                            return map_get(idx) == 8 or map_get(idx) == 9
-                        end)) do
-                            t[vectoindex(p)]=true
-                        end
-                    end
-                end
-            end
-        end
-      -- Inter-cluster
-    --   if #points>1 and c==points[1] then
-    --     for p in all(c) do
-    --       for q in all(points[2]) do
-    --         a=abs(p.x-q.x)+abs(p.y-q.y)
-    --         if a<d then d,a,b=a,p,q end
-    --       end
-    --     end
-    --     if a then line(a,b,r) end
-    --   end
-    end
-    --return r
-    return
 end

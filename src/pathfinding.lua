@@ -21,18 +21,18 @@ function find_traversable_tiles(start, movement, filter_func)
     return costs, prev
 end
 
-function find_optimal_attack_path(finder, units, castles, filter_func)
+function find_optimal_attack_path(finder, filter_func)
     -- Identify all attackable positions
     local attackable = {}
     
     -- Mark tiles adjacent to player units
-    for _, unit in pairs(units) do
+    for _, unit in pairs(UNITS) do
         if unit.team == "player" then
             local range_tiles = get_tiles_within_distance(
                 vectoindex({unit.x, unit.y}),
                 finder.Atr,
                 function(idx)
-                    local u = units[idx]
+                    local u = UNITS[idx]
                     return (u == nil or u == finder) and map_get(idx) < 6
                 end
             )
@@ -43,12 +43,12 @@ function find_optimal_attack_path(finder, units, castles, filter_func)
     end
 
     -- Mark player castles
-    for castle_idx, castle in pairs(castles) do
+    for castle_idx, castle in pairs(CASTLES) do
         if castle.team == "player" then
             local range_tiles = get_neighbors(
                 castle_idx,
                 function(idx)
-                    local u = units[idx]
+                    local u = UNITS[idx]
                     return (u == nil or u == finder) and map_get(idx) < 6
                 end
             )
@@ -82,9 +82,9 @@ function find_optimal_attack_path(finder, units, castles, filter_func)
     return nil  
 end
 
-function trim_path_tail_if_occupied(path, units)
+function trim_path_tail_if_occupied(path)
     for i=#path,1,-1 do
-        if not units[path[i]] then
+        if not UNITS[path[i]] then
             break
         end
         deli(path, i)

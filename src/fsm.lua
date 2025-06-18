@@ -18,18 +18,23 @@ function create_setup_state()
             local noise_fn, tree_fn = os2d_noisefn(seed), os2d_noisefn(treeseed)
     
             init_terrain(noise_fn, tree_fn)
-            local cursor = init_castles(castles)
-            init_player_units(castles, cursor)
-            -- init_enemy_units(castles, units)
+            local cursor = init_castles()
+            printh("CURSOR IS NULL ERROR", "logs/debug.txt")
+            init_player_units(cursor)
+            init_enemy_units()
             co = cocreate(function()
         
-                update_camera(cursor, true)
+                -- update_camera(cursor, true)
                 yield()
                 step = 1
                 yield()
                 change_state("phase_change", {cursor=cursor, phase="player"})
             end)
-            coresume(co)
+            local active, exception = coresume(co)
+            if exception then
+                printh(trace(co, exception), "logs/debug.txt")
+                stop(trace(co, exception))
+            end
         end,
         update = function()
             if btnp(5) then coresume(co) end
@@ -86,13 +91,13 @@ function create_overworld_state()
             -- Select castle or unit
             if btnp(4) then
                 ui = {}
-                local castle, unit = castles[cursor], units[cursor]
+                local castle, unit = CASTLES[cursor], UNITS[cursor]
                 if castle then
                     change_state("castle", {castle=castle, pos=cursor, ov_cam={ peek2(0x5f28), peek2(0x5f2a) }})
                 elseif unit then
                     selected_unit = unit
                     traversable_tiles = find_traversable_tiles(cursor, selected_unit.Mov, function (idx)
-                        local u = units[idx]
+                        local u = UNITS[idx]
                         return (u == nil or u.team == selected_unit.team) and map_get(idx) < 6
                     end)
                     create_unit_info(selected_unit, ui)
@@ -122,7 +127,7 @@ function create_castle_state()
     local selected_unit, castle, pos, ov_cam, cursor, ui
     return {
         enter = function(p)
-            castle, pos, ov_cam, ui = p.castle, p.pos, p.ov_cam, {}
+            castle, pos, ov_cam, ui, selected_unit = p.castle, p.pos, p.ov_cam, {}
     
             -- Store the cursor's screen position before moving the camera
             local castle_pos = indextovec(pos)
@@ -161,16 +166,15 @@ function create_castle_state()
         end,
         draw = function()
             draw_castle_interior()
-            draw_units(castle.units, function (unit)
+            draw_units(function (unit)
                 return unit ~= selected_unit
-            end)
+            end, false, castle.units)
             if selected_unit then
                 draw_unit_at(selected_unit, nil, true)
             end
             draw_cursor(cursor, true)
             draw_ui(cursor, ui)
-        end,
-        exit = function () selected_unit = nil end
+        end
     }
 end
 
@@ -182,7 +186,7 @@ function create_move_state()
             if p.start then start = p.start end
             if p.cam then camera(p.cam[1], p.cam[2]) end
             traversable_tiles = find_traversable_tiles(start, selected_unit.Mov, function (idx)
-                local unit = units[idx]
+                local unit = UNITS[idx]
                 return (unit == nil or unit.team == selected_unit.team) and map_get(idx) < 6
             end)
         end,
@@ -199,7 +203,7 @@ function create_move_state()
         
             -- Select tile to move to
             if btnp(4) then
-                local unit_at_tile = units[cursor]
+                local unit_at_tile = UNITS[cursor]
                 if map_get(cursor) < 6 and not unit_at_tile or unit_at_tile == selected_unit then
                     change_state("action_menu", {unit=selected_unit, cursor=cursor, start=start})
                 end
@@ -221,7 +225,7 @@ function create_action_menu_state()
         enter = function(p)
             selected_unit, cursor, start, ui = p.unit, p.cursor, p.start, {}
             enemy_positions = get_tiles_within_distance(cursor, selected_unit.Atr, function (idx)
-                local unit = units[idx]
+                local unit = UNITS[idx]
                 return unit and unit.team == "enemy"
             end)
             c_idx=check_for_castle(cursor)
@@ -235,12 +239,12 @@ function create_action_menu_state()
             if btnp(4) then
                 local selected_item = get_ui_selection(ui)
                 if selected_item == "Attack" then
-                    change_state("attack_menu", { start = cursor, unit = selected_unit, enemy_positions = enemy_positions })
+                    change_state("attack_menu", { pos = cursor, start = start, unit = selected_unit, enemy_positions = enemy_positions })
                 elseif selected_item == "Standby" or selected_item == "Liberate" then
-                    move_unit(selected_unit, start, cursor)
+                    move_unit(selected_unit, cursor, start)
                     selected_unit.exhausted = true
                     if selected_item == "Liberate" then
-                        flip_castle(c_idx, castles)
+                        flip_castle(c_idx)
                         change_state("castle_capture", {cursor=cursor,capturer=selected_unit})
                     else
                         change_state("overworld", {cursor=cursor})
@@ -260,10 +264,10 @@ function create_action_menu_state()
 end
 
 function create_attack_menu_state()
-    local cursor, selected_unit, ui, start, attackable_units
+    local cursor, selected_unit, ui, pos, start, attackable_units
     return {
         enter = function(p)
-            selected_unit, start, cursor, attackable_units, ui = p.unit, p.start, p.start, {}, {}
+            selected_unit, pos, start, cursor, attackable_units, ui = p.unit, p.pos, p.start, p.pos, {}, {}
             for tile_idx in all(p.enemy_positions) do
                 attackable_units[tile_idx] = true
             end
@@ -276,7 +280,7 @@ function create_attack_menu_state()
 
             if attackable_units[cursor] then
                 local top = (indextovec(cursor)[2] - (peek2(0x5f2a) \ 8)) < 8
-                local att, def = selected_unit, units[cursor]
+                local att, def = selected_unit, UNITS[cursor]
                 create_ui({
                     att.team.." "..att.class,
                     "HP:"..att.HP,
@@ -287,13 +291,13 @@ function create_attack_menu_state()
                     def.team.." "..def.class,
                     "HP:"..def.HP,
                     "Dmg:"..calculate_damage(def, att),
-                    "Hit:"..hit_chance(def.Skl, att.Spd, start).."%"
+                    "Hit:"..hit_chance(def.Skl, att.Spd, pos).."%"
                 }, ui, false, top and "br" or "tr")
 
                 if btnp(4) then  -- Select button
-                    local enemy = units[cursor] -- Check if the cursor is on an attackable enemy
+                    local enemy = UNITS[cursor] -- Check if the cursor is on an attackable enemy
                     if enemy then
-                        move_unit(att, vectoindex({att.x,att.y}), start)
+                        move_unit(att, pos, start)
                         change_state("combat", {
                             attacker = att,
                             defender = enemy,
@@ -305,18 +309,18 @@ function create_attack_menu_state()
             end
     
             if btnp(5) then
-                update_camera(start)
-                change_state("action_menu", {unit=selected_unit, cursor=start})
+                update_camera(pos)
+                change_state("action_menu", {unit=selected_unit, cursor=pos})
             end
         end,
         draw = function()
-            draw_units(units, function (unit)
+            draw_units(function (unit)
                 return (attackable_units[vectoindex({unit.x,unit.y})] == nil or unit.team != "enemy") and unit ~= selected_unit
             end)
-            draw_units(units, function (unit)
+            draw_units(function (unit)
                 return attackable_units[vectoindex({unit.x,unit.y})] ~= nil and unit.team == "enemy"
             end, true)
-            draw_unit_at(selected_unit, start)
+            draw_unit_at(selected_unit, pos)
             draw_cursor(cursor, true)
             draw_ui(cursor, ui)
         end
@@ -348,7 +352,7 @@ function create_combat_state()
                     if hit then
                         def.HP = max(0, def.HP - dmg)
                         if def.HP <= 0 then
-                            units[vectoindex({def.x, def.y})] = nil
+                            UNITS[vectoindex({def.x, def.y})] = nil
                         end
                     end
                     
@@ -377,7 +381,7 @@ function create_combat_state()
             if btnp(4) or btnp(5) then coresume(co) end
         end,
         draw = function()
-            draw_units(units, function(u)
+            draw_units(function(u)
                 return u ~= attacker and u ~= defender
             end, false)
             if attacker then draw_unit_at(attacker, nil, true) end
@@ -395,7 +399,7 @@ function create_enemy_turn()
             logic_co = cocreate(function()
                 if path and #path > 0 then
                     path = trim_path_tail_by_costs(path, enemy.Mov)
-                    path = trim_path_tail_if_occupied(path, units)
+                    path = trim_path_tail_if_occupied(path)
                     
                     -- Start movement animation
                     anim_co = cocreate(function()
@@ -413,13 +417,13 @@ function create_enemy_turn()
                         yield()
                     end
                     
-                    move_unit(enemy, units, cursor)
+                    move_unit(enemy, cursor)
                 end
                 
                 -- Find attack targets (pure logic)
                 local player_units = {}
                 for idx in all(get_tiles_within_distance(cursor, enemy.Atr)) do
-                    local u = units[idx]
+                    local u = UNITS[idx]
                     if u and u.team == "player" then add(player_units, u) end
                 end
     
@@ -427,7 +431,7 @@ function create_enemy_turn()
                 if #player_units == 0 then
                     local c_idx = check_for_castle(cursor, true)
                     if (c_idx ~= nil) then
-                        flip_castle(c_idx, castles)
+                        flip_castle(c_idx)
                         change_state("castle_capture", {cursor=cursor,capturer=enemy})
                     else
                         enemy.exhausted = true
@@ -464,7 +468,7 @@ function create_enemy_turn()
         end,
     
         draw = function()
-            draw_nonselected_overworld_units(enemy, units)
+            draw_nonselected_overworld_units(enemy)
             draw_unit_at(enemy, cursor, true)
         end,
     }
@@ -475,11 +479,11 @@ function create_enemy_phase()
     return {
         enter = function(p)
             cursor = p.cursor
-            local enemies = sort_enemy_turn_order(units)
+            local enemies = sort_enemy_turn_order()
             logic_co = cocreate(function()
                 for current_enemy in all(enemies) do
-                    local path = find_optimal_attack_path(current_enemy, units, castles, function(pos)
-                        local u = units[pos]
+                    local path = find_optimal_attack_path(current_enemy, function(pos)
+                        local u = UNITS[pos]
                         return (u == nil or u.team == current_enemy.team) and map_get(pos) < 6
                     end)
                     if path then
@@ -538,7 +542,7 @@ function create_enemy_phase()
         end,
     
         draw = function()
-            draw_units(units)
+            draw_units()
             draw_cursor(cursor, true)
         end
     }
@@ -549,7 +553,7 @@ function create_phase_change()
     return {
         enter = function(p)
             cursor, phase = p.cursor, p.phase
-            for _, unit in pairs(units) do
+            for _, unit in pairs(UNITS) do
                 if (phase == "enemy" and unit.team == "player") or (phase == "player" and unit.team == "enemy") then
                     unit.exhausted = false
                 end
@@ -568,7 +572,7 @@ function create_phase_change()
             coresume(co)
         end,
         draw = function()
-            draw_units(units)
+            draw_units()
             draw_centered_text(
                 (phase == "enemy") and "Enemy Phase" or "Player Phase",
                 (phase == "enemy") and 8 or 12,
@@ -593,7 +597,7 @@ function create_castle_capture_state()
             if btnp(4) or btnp(5) then
                 capturer.exhausted = true
                 local game_over = true
-                for _, castle in pairs(castles) do
+                for _, castle in pairs(CASTLES) do
                     if (castle.team != capturer.team) game_over = false
                 end
                 if game_over then
@@ -625,7 +629,7 @@ function create_turn_end_confirmation()
             end
         end,
         draw = function()
-            draw_units(units)
+            draw_units()
             draw_centered_text("🅾️:end turn ", 8)
             draw_centered_text("❎:go back ", 12, 67)
         end
@@ -646,7 +650,7 @@ function create_game_over()
             end
         end,
         draw = function()
-            draw_units(units)
+            draw_units()
             draw_centered_text(go_text, not win and 8 or 12)
             draw_centered_text(reset_text, 7, 67)
         end
