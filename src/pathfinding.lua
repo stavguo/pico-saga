@@ -33,7 +33,7 @@ function find_optimal_attack_path(finder, filter_func)
                 finder.Atr,
                 function(idx)
                     local u = UNITS[idx]
-                    return (u == nil or u == finder) and map_get(idx) < 6
+                    return (u == nil or u == finder) and TERRAIN_COSTS[map_get(idx)]
                 end
             )
             for _, idx in ipairs(range_tiles) do
@@ -49,7 +49,7 @@ function find_optimal_attack_path(finder, filter_func)
                 castle_idx,
                 function(idx)
                     local u = UNITS[idx]
-                    return (u == nil or u == finder) and map_get(idx) < 6
+                    return (u == nil or u == finder) and TERRAIN_COSTS[map_get(idx)]
                 end
             )
             for idx in all(range_tiles) do

@@ -19,12 +19,11 @@ function create_setup_state()
     
             init_terrain(noise_fn, tree_fn)
             local cursor = init_castles()
-            printh("CURSOR IS NULL ERROR", "logs/debug.txt")
+            if not cursor then printh("CURSOR IS NULL ERROR", "logs/debug.txt") end
             init_player_units(cursor)
             init_enemy_units()
             co = cocreate(function()
         
-                -- update_camera(cursor, true)
                 yield()
                 step = 1
                 yield()
@@ -64,7 +63,6 @@ function create_overworld_state()
             ui, selected_unit = {}
             if p then
                 if p.cursor then cursor = p.cursor end
-                if p.cam then camera(p.cam[1], p.cam[2]) end
             end
         end,
         update = function()
@@ -74,11 +72,9 @@ function create_overworld_state()
                         change_state("move_unit", {unit=selected_unit, cursor=cursor, start=cursor})
                     end
                 else
-                    cursor, ui = update_cursor(cursor, MAP_W - 1, MAP_W - 1), {}
+                    cursor, ui = update_cursor(cursor), {}
                 end
             end
-    
-            update_camera(cursor)
     
             if btnp(5) then
                 if not next(ui) then
@@ -93,20 +89,21 @@ function create_overworld_state()
                 ui = {}
                 local castle, unit = CASTLES[cursor], UNITS[cursor]
                 if castle then
-                    change_state("castle", {castle=castle, pos=cursor, ov_cam={ peek2(0x5f28), peek2(0x5f2a) }})
+                    change_state("castle", {castle=castle, pos=cursor})
                 elseif unit then
                     selected_unit = unit
                     traversable_tiles = find_traversable_tiles(cursor, selected_unit.Mov, function (idx)
                         local u = UNITS[idx]
-                        return (u == nil or u.team == selected_unit.team) and map_get(idx) < 6
+                        return (u == nil or u.team == selected_unit.team) and TERRAIN_COSTS[map_get(idx)]
                     end)
                     create_unit_info(selected_unit, ui)
                 else
                     local m_idx = map_get(cursor)
+                    local t_cost, t_avo = TERRAIN_COSTS[m_idx], TERRAIN_EFFECTS[m_idx]
                     create_ui({
                         TERRAIN_TYPES[m_idx],
-                        (TERRAIN_COSTS[m_idx] and "mOV:-"..TERRAIN_COSTS[m_idx] or nil),
-                        (TERRAIN_EFFECTS[m_idx] and "aVO:+"..TERRAIN_EFFECTS[m_idx].."%" or nil)
+                        (t_cost and "mOV:-"..t_cost or nil),
+                        (t_avo and "aVO:"..(t_avo > 0 and "+" or "")..t_avo.."%" or nil)
                     }, ui)
                 end
             end
@@ -124,35 +121,25 @@ function create_overworld_state()
 end
 
 function create_castle_state()
-    local selected_unit, castle, pos, ov_cam, cursor, ui
+    local selected_unit, castle, pos, cursor, ui
     return {
         enter = function(p)
-            castle, pos, ov_cam, ui, selected_unit = p.castle, p.pos, p.ov_cam, {}
-    
-            -- Store the cursor's screen position before moving the camera
-            local castle_pos = indextovec(pos)
-            local csx, csy = castle_pos[1] - (peek2(0x5f28) \ 8), castle_pos[2] - (peek2(0x5f2a) \ 8)
-    
-            -- Move the camera to (0, 0)
-            camera(0,0)
-    
-            -- Adjust the cursor's world position to maintain its screen position
-            cursor = vectoindex({csx, csy})
+            castle, pos, cursor, ui, selected_unit = p.castle, p.pos, p.pos, {}
         end,
         update = function()
             if btnp(0) or btnp(1) or btnp(2) or btnp(3) then
                 if selected_unit then
                     if not selected_unit.exhausted then
-                        change_state("move_unit", {unit=selected_unit, cursor=pos, start=pos, cam=ov_cam})
+                        change_state("move_unit", {unit=selected_unit, cursor=pos, start=pos})
                     end
                 else
-                    cursor = update_cursor(cursor, 15, 15)
+                    cursor = update_cursor(cursor)
                 end
             end
     
             if btnp(5) then
                 if not selected_unit then
-                    change_state("overworld", {cursor=pos, cam=ov_cam})
+                    change_state("overworld", {cursor=pos})
                 else
                     selected_unit, ui = nil, {}
                 end
@@ -182,29 +169,25 @@ function create_move_state()
     local selected_unit, cursor, start, traversable_tiles
     return {
         enter = function(p)
-            selected_unit, cursor = p.unit, p.cursor
-            if p.start then start = p.start end
-            if p.cam then camera(p.cam[1], p.cam[2]) end
+            selected_unit, cursor, start = p.unit, p.cursor, p.start
             traversable_tiles = find_traversable_tiles(start, selected_unit.Mov, function (idx)
                 local unit = UNITS[idx]
-                return (unit == nil or unit.team == selected_unit.team) and map_get(idx) < 6
+                return (unit == nil or unit.team == selected_unit.team) and TERRAIN_COSTS[map_get(idx)]
             end)
         end,
         update = function()
             local old_cursor = cursor
         
-            cursor = update_cursor(cursor, MAP_W - 1, MAP_W - 1)
+            cursor = update_cursor(cursor)
         
             if not traversable_tiles[cursor] then
                 cursor = old_cursor
             end
         
-            update_camera(cursor)
-        
             -- Select tile to move to
             if btnp(4) then
                 local unit_at_tile = UNITS[cursor]
-                if map_get(cursor) < 6 and not unit_at_tile or unit_at_tile == selected_unit then
+                if TERRAIN_COSTS[map_get(cursor)] and not unit_at_tile or unit_at_tile == selected_unit then
                     change_state("action_menu", {unit=selected_unit, cursor=cursor, start=start})
                 end
             elseif btnp(5) then
@@ -252,7 +235,7 @@ function create_action_menu_state()
                 end
             end
             if btnp(5) then
-                change_state("move_unit", {unit=selected_unit, cursor=cursor})
+                change_state("move_unit", {unit=selected_unit, cursor=cursor, start=start})
             end
         end,
         draw = function()
@@ -275,8 +258,7 @@ function create_attack_menu_state()
         update = function()
             ui = {}
 
-            cursor = update_cursor(cursor, MAP_W - 1, MAP_W - 1)
-            update_camera(cursor)
+            cursor = update_cursor(cursor)
 
             if attackable_units[cursor] then
                 local top = (indextovec(cursor)[2] - (peek2(0x5f2a) \ 8)) < 8
@@ -309,8 +291,7 @@ function create_attack_menu_state()
             end
     
             if btnp(5) then
-                update_camera(pos)
-                change_state("action_menu", {unit=selected_unit, cursor=pos})
+                change_state("action_menu", {unit=selected_unit, cursor=pos, start=start})
             end
         end,
         draw = function()
@@ -406,7 +387,6 @@ function create_enemy_turn()
                         for i=1,#path do
                             local v = indextovec(path[i])
                             cursor = vectoindex({v[1], v[2]})
-                            update_camera(cursor, true)
                             local lt = time()
                             while time() - lt < 0.2 do yield() end
                         end
@@ -455,7 +435,6 @@ function create_enemy_turn()
                 if #path > 0 then
                     local v = indextovec(path[#path])
                     cursor = vectoindex({v[1], v[2]})
-                    update_camera(cursor, true)
                 end
             end
             
@@ -475,7 +454,7 @@ function create_enemy_turn()
 end
 
 function create_enemy_phase()
-    local cam_path, logic_co, anim_co, cursor
+    local c_path, logic_co, anim_co, cursor
     return {
         enter = function(p)
             cursor = p.cursor
@@ -484,17 +463,16 @@ function create_enemy_phase()
                 for current_enemy in all(enemies) do
                     local path = find_optimal_attack_path(current_enemy, function(pos)
                         local u = UNITS[pos]
-                        return (u == nil or u.team == current_enemy.team) and map_get(pos) < 6
+                        return (u == nil or u.team == current_enemy.team) and TERRAIN_COSTS[map_get(pos)]
                     end)
                     if path then
-                        cam_path = generate_full_path(indextovec(cursor), {current_enemy.x, current_enemy.y})
+                        c_path = generate_full_path(indextovec(cursor), {current_enemy.x, current_enemy.y})
                         
                         -- Start animation coroutine
                         anim_co = cocreate(function()
-                            for i=1,#cam_path do
-                                local v = cam_path[i]
+                            for i=1,#c_path do
+                                local v = c_path[i]
                                 cursor = vectoindex({v[1], v[2]})
-                                update_camera(cursor, true)
                                 local lt = time()
                                 while time() - lt < 0.1 do
                                     yield()
@@ -526,10 +504,9 @@ function create_enemy_phase()
                 -- Skip animation by killing the anim coroutine
                 anim_co = nil
                 -- Jump to final position
-                if cam_path and #cam_path > 0 then
-                    local v = cam_path[#cam_path]
+                if c_path and #c_path > 0 then
+                    local v = c_path[#c_path]
                     cursor = vectoindex({v[1], v[2]})
-                    update_camera(cursor, true)
                 end
             end
             
@@ -567,7 +544,6 @@ function create_phase_change()
             end)
         end,
         update = function()
-            update_camera(cursor)
             if btnp(4) then change_state(phase == "enemy" and "enemy_phase" or "overworld", {cursor=cursor}) end
             coresume(co)
         end,
@@ -588,7 +564,7 @@ function create_castle_capture_state()
         enter = function(p)
             cursor, capturer, ui = p.cursor, p.capturer, {}
             local msg = {
-                capturer.team.." "..capturer.class.." ".."liberated",
+                capturer.team.." "..capturer.class.." "..(capturer.team == "player" and "liberated" or "captured"),
                 (capturer.team == "player" and "enemy" or "player").." castle!"
             }
             create_ui(msg, ui, false)
@@ -646,13 +622,17 @@ function create_game_over()
         end,
         update = function()
             if btnp(0) or btnp(1) or btnp(2) or btnp(3) or btnp(4) or btnp(5) then
-                extcmd('reset')
+                change_state("setup")
             end
         end,
         draw = function()
             draw_units()
             draw_centered_text(go_text, not win and 8 or 12)
             draw_centered_text(reset_text, 7, 67)
+        end,
+        exit = function()
+            reset()
+            CASTLES, UNITS = {}, {}
         end
     }
 end

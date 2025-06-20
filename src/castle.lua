@@ -5,7 +5,7 @@ function find_largest_square(start_x, start_y, width, height, targ)
         dp[y] = 0
     end
 
-    local max_size, candidates, diagonal = 2, {}, 0
+    local max_size, candidates, diagonal = 3, {}, 0
 
     -- Process column by column from right to left
     for x = width - 1, 0, -1 do
@@ -103,128 +103,11 @@ function init_castles()
     local player, cursor = flr(rnd(#actual)) + 1
     for i, idx in ipairs(actual) do
         local x, y = unpack(indextovec(idx))
-        printh("creating castle at "..idx, "logs/debug.txt")
         if (i == player) cursor = idx
         CASTLES[idx] = { team = i == player and "player" or "enemy", units = {} }
         mset(x, y, i == player and 8 or 9)
     end
     return cursor
-end
-
-function generate_edges(vertices)
-    local edges = {}
-    for i=1,#vertices-1 do
-        for j=i+1,#vertices do
-            local goal, start, cost = vertices[j], vertices[i], 0
-            local path = generate_full_path(indextovec(start), indextovec(goal))
-            -- for k=1,#path-1 do
-            --     cost += TERRAIN_COSTS[mget(path[k][1],path[k][2])]
-            -- end
-            insert(edges, {start, goal}, #path)
-        end
-    end
-    return edges
-end
-
-function dsu_new(V)
-    local dsu = {
-        parent = {},
-        rank = {}
-    }
-    for v in all(V) do
-        dsu.parent[v], dsu.rank[v] = v, 1
-    end
-    return dsu
-end
-  
-function dsu_find(dsu, i)
-    if dsu.parent[i] ~= i then
-        dsu.parent[i] = dsu_find(dsu, dsu.parent[i])
-    end
-    return dsu.parent[i]
-end
-  
-function dsu_union(dsu, x, y)
-    local s1 = dsu_find(dsu, x)
-    local s2 = dsu_find(dsu, y)
-    if s1 ~= s2 then
-        if dsu.rank[s1] < dsu.rank[s2] then
-            dsu.parent[s1] = s2
-        elseif dsu.rank[s1] > dsu.rank[s2] then
-            dsu.parent[s2] = s1
-        else
-            dsu.parent[s2] = s1
-            dsu.rank[s1] = dsu.rank[s1] + 1
-        end
-        return true  -- Indicate a successful union
-    end
-    return false  -- Indicate no union was performed
-end
-
-function kruskals(V)
-    printh("kruskals_mst()", "logs/debug.txt")
-    -- Sort all edges using our insert function
-    local sorted_edges = generate_edges(V)
-
-    -- Initialize DSU and result collection
-    local dsu, mst_edges, count = dsu_new(V), {}, 0
-
-    for i = #sorted_edges, 0, -1 do
-        local edge = sorted_edges[i]
-        local x, y = edge[1][1], edge[1][2]
-        printh("edge {"..x..","..y.."} has weight "..edge[2], "logs/debug.txt")
-        
-        -- Only add edge if it doesn't form a cycle
-        if dsu_find(dsu, x) ~= dsu_find(dsu, y) then
-            dsu_union(dsu, x, y)
-            add(mst_edges, {x, y})  -- Store the edge
-            local vx, vy = indextovec(x), indextovec(y)
-            printh("adding {"..vx[1]..","..vx[2].."} -> {"..vy[1]..","..vy[2].."} to MST", "logs/debug.txt")
-            count += 1
-            if count == #V - 1 then
-                break  -- MST is complete
-            end
-        end
-    end
-
-    local l_edge = sorted_edges[1]
-    local lx, ly = indextovec(l_edge[1][1]), indextovec(l_edge[1][2])
-    printh("Longest edge was {"..lx[1]..","..lx[2].."} -> {"..ly[1]..","..ly[2].."}", "logs/debug.txt")
-
-    return mst_edges
-end
-
-function make_routes(V)
-    for edge in all(kruskals(V)) do
-        local path = generate_full_path(indextovec(edge[1]),indextovec(edge[2]))
-        for i = 1, #path -1 do
-            local tile, next_tile = path[i], path[i + 1]
-            local tx, ty, nx, ny = tile[1], tile[2], next_tile[1], next_tile[2]
-            local dx, dy = nx - tx, ny - ty
-            local spr = abs(dx) > abs(dy) and 13 or 14
-            local has_north, has_south, has_east, has_west = false, false, false, false
-            local ns = get_tiles_within_distance(vectoindex(tile), 1, function (idx)
-                return map_get(idx) == 2 or map_get(idx) == 6
-            end)
-            for idx in all(ns) do
-                local vec = indextovec(idx)
-                if vec[1] == tx then
-                    -- Vertical neighbor (N or S)
-                    if vec[2] < ty then has_north = true
-                    elseif vec[2] > ty then has_south = true end
-                elseif vec[2] == ty then
-                    -- Horizontal neighbor (E or W)
-                    if vec[1] > tx then has_east = true
-                    elseif vec[1] < tx then has_west = true end
-                end
-            end
-            if (has_north and has_south) or (has_east and has_west) then
-                mset(tx, ty, spr)
-            else
-                mset(tx, ty, 5)
-            end
-        end
-    end
 end
 
 -- Draw the interior of a castle
@@ -242,11 +125,6 @@ function draw_castle_interior()
             end
         end
     end
-end
-
-function map_get(t_idx)
-    local pos = indextovec(t_idx)
-    return mget(pos[1], pos[2])
 end
 
 function check_for_castle(t_idx, is_enemy_turn)
