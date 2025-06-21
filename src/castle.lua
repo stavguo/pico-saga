@@ -70,24 +70,26 @@ end
 
 function init_castles()
     local sections, places = {
-        -- Top row (y: 0-4)
-        {x_start=0, x_end=4, y_start=0, y_end=4, targ={0, 0}},    -- Top-left
-        {x_start=5, x_end=10, y_start=0, y_end=4, targ={7, 0}},   -- Top-center
-        {x_start=11, x_end=15, y_start=0, y_end=4, targ={15, 0}}, -- Top-right
+        -- -- Top row (y: 0-4)
+        -- {x_start=0, x_end=4, y_start=0, y_end=4, targ={0, 0}},    -- Top-left
+        -- {x_start=5, x_end=10, y_start=0, y_end=4, targ={7, 0}},   -- Top-center
+        -- {x_start=11, x_end=15, y_start=0, y_end=4, targ={15, 0}}, -- Top-right
         
-        -- Middle row (y: 5-10)
-        {x_start=0, x_end=4, y_start=5, y_end=10, targ={0, 7}},    -- Mid-left
-        {x_start=5, x_end=10, y_start=5, y_end=10, targ={7, 7}},  -- Center
-        {x_start=11, x_end=15, y_start=5, y_end=10, targ={15, 7}},-- Mid-right
+        -- -- Middle row (y: 5-10)
+        -- {x_start=0, x_end=4, y_start=5, y_end=10, targ={0, 7}},    -- Mid-left
+        -- {x_start=5, x_end=10, y_start=5, y_end=10, targ={7, 7}},  -- Center
+        -- {x_start=11, x_end=15, y_start=5, y_end=10, targ={15, 7}},-- Mid-right
         
-        -- Bottom row (y: 11-15)
-        {x_start=0, x_end=4, y_start=11, y_end=15, targ={0, 15}},  -- Bottom-left
-        {x_start=5, x_end=10, y_start=11, y_end=15, targ={7, 15}},-- Bottom-center
-        {x_start=11, x_end=15, y_start=11, y_end=15, targ={15, 15}}-- Bottom-right
-        -- { x_start = 0, x_end = 15, y_start = 0, y_end = 15, targ = {0,0} },
-        -- { x_start = 16, x_end = 31, y_start = 0, y_end = 15, targ = {31,0} },
-        -- { x_start = 0, x_end = 15, y_start = 16, y_end = 31, targ = {0,31} },
-        -- { x_start = 16, x_end = 31, y_start = 16, y_end = 31, targ = {31,31} }
+        -- -- Bottom row (y: 11-15)
+        -- {x_start=0, x_end=4, y_start=11, y_end=15, targ={0, 15}},  -- Bottom-left
+        -- {x_start=5, x_end=10, y_start=11, y_end=15, targ={7, 15}},-- Bottom-center
+        -- {x_start=11, x_end=15, y_start=11, y_end=15, targ={15, 15}}-- Bottom-right
+
+
+        { x_start = 0, x_end = 7, y_start = 0, y_end = 7, targ = {0,0} },
+        { x_start = 8, x_end = 15, y_start = 0, y_end = 7, targ = {15,0} },
+        { x_start = 0, x_end = 7, y_start = 8, y_end = 15, targ = {0,15} },
+        { x_start = 8, x_end = 15, y_start = 8, y_end = 15, targ = {15,15} }
     }, {}
     for sec in all(sections) do
         local w, h = sec.x_end - sec.x_start + 1, sec.y_end - sec.y_start + 1

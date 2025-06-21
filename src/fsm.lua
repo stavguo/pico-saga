@@ -204,17 +204,16 @@ function create_move_state()
 end
 
 function create_action_menu_state()
-    local ui, cursor, selected_unit, start, enemy_positions, c_idx
+    local ui, cursor, selected_unit, start, c_idx
     return {
         enter = function(p)
             selected_unit, cursor, start, ui = p.unit, p.cursor, p.start, {}
-            enemy_positions = get_tiles_within_distance(cursor, selected_unit.Atr, function (idx)
-                local unit = UNITS[idx]
-                return unit and unit.team == "enemy"
-            end)
             c_idx=check_for_castle(cursor)
             local opts={}
-            if next(enemy_positions) then add(opts,"Attack") end
+            if #get_tiles_within_distance(cursor, selected_unit.Atr, function (idx)
+                local unit = UNITS[idx]
+                return unit and unit.team == "enemy"
+            end) > 0 then add(opts,"Attack") end
             add(opts,c_idx and "Liberate" or "Standby")
             create_ui(opts,ui,true)
         end,
@@ -223,7 +222,7 @@ function create_action_menu_state()
             if btnp(4) then
                 local selected_item = get_ui_selection(ui)
                 if selected_item == "Attack" then
-                    change_state("attack_menu", { pos = cursor, start = start, unit = selected_unit, enemy_positions = enemy_positions })
+                    change_state("attack_menu", { pos = cursor, start = start, unit = selected_unit })
                 elseif selected_item == "Standby" or selected_item == "Liberate" then
                     move_unit(selected_unit, cursor, start)
                     selected_unit.exhausted = true
@@ -248,12 +247,16 @@ function create_action_menu_state()
 end
 
 function create_attack_menu_state()
-    local cursor, selected_unit, ui, pos, start, attackable_units
+    local cursor, selected_unit, ui, pos, start, attackable_units, reachable
     return {
         enter = function(p)
-            selected_unit, pos, start, cursor, attackable_units, ui = p.unit, p.pos, p.start, p.pos, {}, {}
-            for tile_idx in all(p.enemy_positions) do
-                attackable_units[tile_idx] = true
+            selected_unit, pos, start, cursor, attackable_units, ui, reachable = p.unit, p.pos, p.start, p.pos, {}, {}, {}
+            for tile in all(get_tiles_within_distance(cursor, selected_unit.Atr)) do
+                reachable[tile] = true
+                local unit = UNITS[tile]
+                if unit and unit.team == "enemy" then
+                    attackable_units[tile] = true
+                end
             end
         end,
         update = function()
@@ -296,6 +299,7 @@ function create_attack_menu_state()
             end
         end,
         draw = function()
+            draw_traversable_edges(reachable, 7)
             draw_units(function (unit)
                 return (attackable_units[vectoindex({unit.x,unit.y})] == nil or unit.team != "enemy") and unit ~= selected_unit
             end)
