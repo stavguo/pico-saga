@@ -11,6 +11,7 @@ function change_state(name, payload)
 end
 
 function _init()
+    printh("", "logs/debug.txt", true)
     CASTLES, UNITS = {}, {}
     states = {
         setup = create_setup_state(),

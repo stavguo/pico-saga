@@ -69,7 +69,7 @@ function get_square_center(top_left, size, targ)
 end
 
 function init_castles()
-    local sections, actual = {
+    local sections, places = {
         -- Top row (y: 0-4)
         {x_start=0, x_end=4, y_start=0, y_end=4, targ={0, 0}},    -- Top-left
         {x_start=5, x_end=10, y_start=0, y_end=4, targ={7, 0}},   -- Top-center
@@ -92,20 +92,23 @@ function init_castles()
     for sec in all(sections) do
         local w, h = sec.x_end - sec.x_start + 1, sec.y_end - sec.y_start + 1
         local sq = find_largest_square(sec.x_start, sec.y_start, w, h, sec.targ)
-        if sq then add(actual, vectoindex(sq.center)) end
+        if sq then add(places, vectoindex(sq.center)) end
     end
-    if #actual < 2 then
-        printh("NEED TO RESET")
+    local edges = generate_edges(places)
+    if #places < 2 or edges[1][2] < 20 then
+        printh("NEED TO RESET", "logs/debug.txt")
+        reset()
+        CASTLES, UNITS, places = {}, {}, {}
         change_state("setup")
-        --return
+        return
     end
-    make_routes(actual)
-    local player, cursor = flr(rnd(#actual)) + 1
-    for i, idx in ipairs(actual) do
+    local player, cursor = edges[1][1][flr(rnd(2)) + 1]
+    make_routes(places)
+    for idx in all(places) do
         local x, y = unpack(indextovec(idx))
-        if (i == player) cursor = idx
-        CASTLES[idx] = { team = i == player and "player" or "enemy", units = {} }
-        mset(x, y, i == player and 8 or 9)
+        if (idx == player) cursor = idx
+        CASTLES[idx] = { team = idx == player and "player" or "enemy", units = {} }
+        mset(x, y, idx == player and 8 or 9)
     end
     return cursor
 end
