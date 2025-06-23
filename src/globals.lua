@@ -131,3 +131,9 @@ function map_get(t_idx)
     local pos = indextovec(t_idx)
     return mget(pos[1], pos[2])
 end
+
+function tablelength(T)
+    local count = 0
+    for _ in pairs(T) do count = count + 1 end
+    return count
+end

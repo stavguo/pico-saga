@@ -225,11 +225,11 @@ function create_action_menu_state()
                     change_state("attack_menu", { pos = cursor, start = start, unit = selected_unit })
                 elseif selected_item == "Standby" or selected_item == "Liberate" then
                     move_unit(selected_unit, cursor, start)
-                    selected_unit.exhausted = true
                     if selected_item == "Liberate" then
                         flip_castle(c_idx)
-                        change_state("castle_capture", {cursor=cursor,capturer=selected_unit})
+                        change_state("castle_capture", {cursor=cursor, capturer=selected_unit, castle=c_idx})
                     else
+                        selected_unit.exhausted = true
                         change_state("overworld", {cursor=cursor})
                     end
                 end
@@ -417,7 +417,7 @@ function create_enemy_turn()
                     local c_idx = check_for_castle(cursor, true)
                     if (c_idx ~= nil) then
                         flip_castle(c_idx)
-                        change_state("castle_capture", {cursor=cursor,capturer=enemy})
+                        change_state("castle_capture", {cursor=cursor, capturer=enemy, castle=c_idx})
                     else
                         enemy.exhausted = true
                         change_state("enemy_phase", {cursor=cursor})
@@ -499,6 +499,9 @@ function create_enemy_phase()
                     end
                 end
 
+                local lt = time()
+                while time() - lt < 0.5 do yield() end
+
                 -- leave
                 change_state("phase_change", {cursor=cursor, phase="player"})
             end)
@@ -509,7 +512,7 @@ function create_enemy_phase()
                 -- Skip animation by killing the anim coroutine
                 anim_co = nil
                 -- Jump to final position
-                if c_path and #c_path > 0 then
+                if next(c_path) then
                     local v = c_path[#c_path]
                     cursor = vectoindex({v[1], v[2]})
                 end
@@ -564,13 +567,15 @@ function create_phase_change()
 end
 
 function create_castle_capture_state()
-    local ui, cursor, capturer = {}
+    local ui, cursor, capturer, castle = {}
     return {
         enter = function(p)
-            cursor, capturer, ui = p.cursor, p.capturer, {}
+            cursor, capturer, castle, ui = p.cursor, p.capturer, p.castle, {}
+            local unit_count = tablelength(CASTLES[castle].units)
             local msg = {
                 capturer.team.." "..capturer.class.." "..(capturer.team == "player" and "liberated" or "captured"),
-                (capturer.team == "player" and "enemy" or "player").." castle!"
+                (capturer.team == "player" and "enemy" or "player").." castle!",
+                (unit_count > 0 and (unit_count.." unit"..(unit_count > 1 and "s" or "").." "..(capturer.team == "player" and "released" or "imprisoned")) or nil)
             }
             create_ui(msg, ui, false)
         end,

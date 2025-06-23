@@ -144,6 +144,6 @@ function flip_castle(c_idx)
     current.team = current.team == "player" and "enemy" or "player"
     mset(pos[1], pos[2], current.team == "player" and 8 or 9)
     for _,unit in pairs(CASTLES[c_idx].units) do
-        unit.exhausted = false
+        unit.exhausted = current.team == "enemy" and true or false
     end
 end
