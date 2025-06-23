@@ -145,32 +145,28 @@ function get_tiles_within_distance(tile_idx, max_distance, filter_func)
     return result
 end
 
-function hit_chance(att_skl, def_spd, def_idx)
-    local terrain = map_get(def_idx)
-    local terrain_effect = TERRAIN_EFFECTS[terrain] or 0
-    local base_hit_rate = 80  -- Example base hit rate
-    local accuracy = base_hit_rate + (att_skl) - (def_spd + terrain_effect)
-    return mid(0, accuracy, 100)  -- Clamp between 0% and 100%
+function hit_chance(att, def, def_idx)
+    local accuracy, evade = 2 * att.Skl, 2 * def.Spd + (TERRAIN_EFFECTS[map_get(def_idx)] or 0)
+    if is_adv(att, def) then accuracy *= 1.2 end
+    if is_adv(def, att) then evade *= 1.2 end
+    return mid(0, accuracy - evade, 100)
 end
 
-function calculate_damage(attacker, defender)
-    local attack = attacker.Str > attacker.Mag and attacker.Str or attacker.Mag
-    local defense = attacker.Str > attacker.Mag and defender.Def or defender.Mdf
-    if is_attacker_advantage(attacker, defender) then defense = 0 end
-    if is_attacker_advantage(defender, attacker) then defense = defense * 2 end
-    local damage = attack - defense
-    return max(1, damage)  -- Ensure at least 1 damage
+function get_dmg(att, def)
+    local attack = att.Str > att.Mag and att.Str or att.Mag
+    local defense = att.Str > att.Mag and def.Def or def.Mdf
+    return max(1, attack - defense)
 end
 
-function will_hit(att_skl, def_spd, def_idx)
-    return flr(rnd(100)) < hit_chance(att_skl, def_spd, def_idx)
+function will_hit(att, def, def_idx)
+    return flr(rnd(100)) < hit_chance(att, def, def_idx)
 end
 
-function is_attacker_advantage(attacker, defender)
-    local advantage_classes = WEAPON_TRIANGLE[attacker.class]
+function is_adv(att, def)
+    local advantage_classes = WEAPON_TRIANGLE[att.class]
     if advantage_classes then
-        for _, class in ipairs(advantage_classes) do
-            if class == defender.class then
+        for class in all(advantage_classes) do
+            if class == def.class then
                 return true  -- Attacker has advantage, defender cannot counterattack
             end
         end

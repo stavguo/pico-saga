@@ -50,13 +50,13 @@ TREE_LAYERS = {
 }
 
 UNIT_STATS = {
-    ["Lance"] = { Sprite = 16, HP = 30, Str = 20, Mag = 0, Skl = 5, Spd = 5, Def = 5, Mdf = 0, Mov = 5, Atr = 1 },
-    ["Axe"] = { Sprite = 17, HP = 30, Str = 20, Mag = 0, Skl = 5, Spd = 5, Def = 5, Mdf = 0, Mov = 5, Atr = 1 },
-    ["Sword"] = { Sprite = 15, HP = 30, Str = 20, Mag = 0, Skl = 5, Spd = 5, Def = 5, Mdf = 0, Mov = 5, Atr = 1 },
-    ["Archer"] = { Sprite = 18, HP = 30, Str = 15, Mag = 0, Skl = 20, Spd = 0, Def = 5, Mdf = 0, Mov = 5, Atr = 3 },
-    ["Mage"] = { Sprite = 19, HP = 20, Str = 0, Mag = 20, Skl = 5, Spd = 2, Def = 0, Mdf = 5, Mov = 4, Atr = 2 },
-    ["Thief"] = { Sprite = 20, HP = 20, Str = 15, Mag = 0, Skl = 10, Spd = 20, Def = 2, Mdf = 0, Mov = 6, Atr = 1 },
-    ["Monk"] = { Sprite = 21, HP = 30, Str = 15, Mag = 0, Skl = 5, Spd = 10, Def = 5, Mdf = 10, Mov = 4, Atr = 1  }
+    ["Lance"] = { Sprite = 16, HP = 30, Str = 20, Mag = 0, Skl = 50, Spd = 10, Def = 5, Mdf = 0, Mov = 5, Atr = 1 },
+    ["Axe"] = { Sprite = 17, HP = 30, Str = 20, Mag = 0, Skl = 50, Spd = 10, Def = 5, Mdf = 0, Mov = 5, Atr = 1 },
+    ["Sword"] = { Sprite = 15, HP = 30, Str = 20, Mag = 0, Skl = 50, Spd = 10, Def = 5, Mdf = 0, Mov = 5, Atr = 1 },
+    ["Archer"] = { Sprite = 18, HP = 30, Str = 15, Mag = 0, Skl = 50, Spd = 5, Def = 5, Mdf = 0, Mov = 5, Atr = 3 },
+    ["Mage"] = { Sprite = 19, HP = 20, Str = 0, Mag = 20, Skl = 45, Spd = 5, Def = 0, Mdf = 5, Mov = 4, Atr = 2 },
+    ["Thief"] = { Sprite = 20, HP = 20, Str = 15, Mag = 0, Skl = 50, Spd = 20, Def = 2, Mdf = 0, Mov = 6, Atr = 1 },
+    ["Monk"] = { Sprite = 21, HP = 30, Str = 15, Mag = 0, Skl = 50, Spd = 10, Def = 5, Mdf = 10, Mov = 4, Atr = 1  }
 }
 
 -- Weapon Triangle Matchups

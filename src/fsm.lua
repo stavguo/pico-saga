@@ -270,14 +270,14 @@ function create_attack_menu_state()
                 create_ui({
                     att.team.." "..att.class,
                     "HP:"..att.HP,
-                    "Dmg:"..calculate_damage(att, def),
-                    "Hit:"..hit_chance(att.Skl, def.Spd, cursor).."%"
+                    "Dmg:"..get_dmg(att, def),
+                    "Hit:"..flr(hit_chance(att, def, cursor)).."%"
                 }, ui, false, top and "bl" or "tl")
                 create_ui({
                     def.team.." "..def.class,
                     "HP:"..def.HP,
-                    "Dmg:"..calculate_damage(def, att),
-                    "Hit:"..hit_chance(def.Skl, att.Spd, pos).."%"
+                    "Dmg:"..get_dmg(def, att),
+                    "Hit:"..flr(hit_chance(def, att, pos)).."%"
                 }, ui, false, top and "br" or "tr")
 
                 if btnp(4) then  -- Select button
@@ -320,9 +320,9 @@ function create_combat_state()
             attacker, defender, cursor = p.attacker, p.defender, p.cursor
             co = cocreate(function()
                 local function process_attack(atk, def, is_counter)
-                    local hit = will_hit(atk.Skl, def.Spd, vectoindex({def.x,def.y}))
-                    local dmg = hit and calculate_damage(atk, def) or 0
-                    local broken = is_counter and false or is_attacker_advantage(atk, def)
+                    local hit = will_hit(atk, def, vectoindex({def.x,def.y}))
+                    local dmg = hit and get_dmg(atk, def) or 0
+                    local broken = is_counter and false or is_adv(atk, def)
                     
                     local msg = hit and {
                         atk.team.." "..atk.class.." "..(def.HP - dmg <= 0 and "defeated" or broken and "broke" or "hit"),
