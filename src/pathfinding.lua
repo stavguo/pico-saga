@@ -61,10 +61,7 @@ function find_optimal_attack_path(finder, filter_func)
     if next(attackable) == nil then return {} end
 
     -- Perform pathfinding to find movement costs
-    local mov
-    if (finder.enemy_ai == "Range") mov = finder.Mov
-    if (finder.enemy_ai == "Range2") mov = finder.Mov * 2
-    local costs, prev = find_traversable_tiles(vectoindex({finder.x, finder.y}), mov, filter_func)
+    local costs, prev = find_traversable_tiles(vectoindex({finder.x, finder.y}), finder.enemy_ai == "Range" and finder.Mov or nil, filter_func)
     
 
     -- Find intersection and sort using your insert

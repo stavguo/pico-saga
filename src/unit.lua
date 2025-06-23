@@ -117,7 +117,7 @@ function init_enemy_units()
                         pos[2],
                         UNIT_MINS[flr(rnd(#UNIT_MINS))+1][1],
                         "enemy",
-                        ({"Charge","Range","Range2"})[flr(rnd(3))+1])
+                        ({"Charge","Range"})[flr(rnd(2))+1])
                 end
             end
         end
