@@ -339,6 +339,11 @@ function create_combat_state()
                         def.HP = max(0, def.HP - dmg)
                         if def.HP <= 0 then
                             UNITS[vectoindex({def.x, def.y})] = nil
+                            if def.team == "player" then
+                                SUMMARY.players[1] += 1
+                            else
+                                SUMMARY.enemies[1] += 1
+                            end
                         end
                     end
                     
@@ -537,6 +542,7 @@ function create_phase_change()
     local co, cursor, phase
     return {
         enter = function(p)
+            SUMMARY.phases += 1
             cursor, phase = p.cursor, p.phase
             for _, unit in pairs(UNITS) do
                 if (phase == "enemy" and unit.team == "player") or (phase == "player" and unit.team == "enemy") then
@@ -628,7 +634,6 @@ function create_game_over()
         enter = function(p)
             win = p.win
             go_text = not win and "defeat" or "victory"
-            reset_text = "PRESS ANY BUTTON TO RESET"
         end,
         update = function()
             if btnp(0) or btnp(1) or btnp(2) or btnp(3) or btnp(4) or btnp(5) then
@@ -637,8 +642,11 @@ function create_game_over()
         end,
         draw = function()
             draw_units()
-            draw_centered_text(go_text, not win and 8 or 12)
-            draw_centered_text(reset_text, 7, 67)
+            draw_centered_text(go_text, not win and 8 or 12, 39)
+            draw_centered_text("phases:"..SUMMARY.phases, 7, 53)
+            draw_centered_text("units lost:"..SUMMARY.players[1].."/"..SUMMARY.players[2], 7, 60)
+            draw_centered_text("foes defeated:"..SUMMARY.enemies[1].."/"..SUMMARY.enemies[2], 7, 67)
+            draw_centered_text("press any button to reset", 7, 81)
         end,
         exit = function()
             reset()

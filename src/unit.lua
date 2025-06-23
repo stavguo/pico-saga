@@ -73,6 +73,7 @@ function init_player_units(cursor)
         if i == cursor then
             local throne = rnd(1) < 0.5 and 7 or 8
             castle.units[vectoindex({throne,1})] = create_unit(throne, 1, player_classes[actual], "player", nil, false)
+            SUMMARY.players[2] += 1
             actual += 1
         end
 
@@ -83,6 +84,7 @@ function init_player_units(cursor)
             local x = is_right and (11 + (pos - 2) * 2) or (2 + pos * 2)
             local y = 2 + row * 2
             castle.units[vectoindex({x,y})] = create_unit(x, y, player_classes[actual], "player", nil, (i ~= cursor and true or false))
+            SUMMARY.players[2] += 1
             actual += 1
         end
     end
@@ -118,6 +120,7 @@ function init_enemy_units()
                         UNIT_MINS[flr(rnd(#UNIT_MINS))+1][1],
                         "enemy",
                         ({"Charge","Range"})[flr(rnd(2))+1])
+                        SUMMARY.enemies[2] += 1
                 end
             end
         end

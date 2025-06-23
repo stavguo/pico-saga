@@ -12,7 +12,11 @@ end
 
 function _init()
     printh("", "logs/debug.txt", true)
-    CASTLES, UNITS = {}, {}
+    CASTLES, UNITS, SUMMARY = {}, {}, {
+        phases = 0,
+        enemies = {0, 0},
+        players = {0, 0},
+    }
     states = {
         setup = create_setup_state(),
         overworld = create_overworld_state(),
