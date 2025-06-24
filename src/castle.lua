@@ -109,8 +109,9 @@ function init_castles()
     for idx in all(places) do
         local x, y = unpack(indextovec(idx))
         if (idx == player) cursor = idx
-        CASTLES[idx] = { team = idx == player and "player" or "enemy", units = {} }
-        mset(x, y, idx == player and 8 or 9)
+        local hp = 3
+        CASTLES[idx] = { team = idx == player and "player" or "enemy", units = {}, hp = hp }
+        mset(x, y, idx == player and 8 or 9 + hp)
     end
     return cursor
 end
@@ -121,12 +122,12 @@ function draw_castle_interior()
         for x = 0, 15 do
             if x == 0 or x == 15 then
                 if y == 0 or y == 15 then
-                    spr(10, x * 8, y * 8)
+                    spr(13, x * 8, y * 8)
                 else
-                    spr(11, x * 8, y * 8)
+                    spr(14, x * 8, y * 8)
                 end
             else
-                spr(12, x * 8, y * 8)
+                spr(15, x * 8, y * 8)
             end
         end
     end
@@ -134,7 +135,12 @@ end
 
 function check_for_castle(t_idx, is_enemy_turn)
     local adj_tiles = get_neighbors(t_idx, function (idx)
-        return map_get(idx) == (is_enemy_turn and 8 or 9)
+        local tile = map_get(idx)
+        if is_enemy_turn then
+            return tile == 8
+        else
+            return tile >= 9 and tile <= 12
+        end
     end)
     return #adj_tiles > 0 and adj_tiles[1] or nil
 end
@@ -146,4 +152,11 @@ function flip_castle(c_idx)
     for _,unit in pairs(CASTLES[c_idx].units) do
         unit.exhausted = current.team == "enemy" and true or false
     end
+end
+
+function reduce_castle(c_idx)
+    local castle = CASTLES[c_idx]
+    local x, y = unpack(indextovec(c_idx))
+    castle.hp -= 1
+    mset(x, y, 9 + castle.hp)
 end

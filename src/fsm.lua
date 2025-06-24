@@ -6,15 +6,8 @@ function create_setup_state()
             co = cocreate(function()
                 local seed, treeseed, _seeds_initialized = flr(rnd(32767)), flr(rnd(32767))
                 if not _seeds_initialized then
-                    -- printh("", "logs/seeds.txt", true)
                     _seeds_initialized = true
                 end
-                -- printh(
-                --     "Generated map with seed: " .. seed .."/" .. treeseed ..
-                --     " at " .. stat(93) .. ":" .. stat(94) .. ":" .. stat(95),
-                --     "logs/seeds.txt"
-                -- )
-                -- Initialize terrain and castles
                 local noise_fn, tree_fn = os2d_noisefn(seed), os2d_noisefn(treeseed)
         
                 init_terrain(noise_fn, tree_fn)
@@ -213,22 +206,27 @@ function create_action_menu_state()
             if #get_tiles_within_distance(cursor, selected_unit.Atr, function (idx)
                 local unit = UNITS[idx]
                 return unit and unit.team == "enemy"
-            end) > 0 then add(opts,"Attack") end
-            add(opts,c_idx and "Liberate" or "Standby")
+            end) > 0 then add(opts,"attack") end
+            add(opts,(CASTLES[c_idx] == nil) and "standby" 
+                or (CASTLES[c_idx].hp > 0) and "siege" 
+                or "liberate")
             create_ui(opts,ui,true)
         end,
         update = function()
             update_ui(ui)
             if btnp(4) then
-                local selected_item = get_ui_selection(ui)
-                if selected_item == "Attack" then
+                local opt = get_ui_selection(ui)
+                if opt == "attack" then
                     change_state("attack_menu", { pos = cursor, start = start, unit = selected_unit })
-                elseif selected_item == "Standby" or selected_item == "Liberate" then
+                else
                     move_unit(selected_unit, cursor, start)
-                    if selected_item == "Liberate" then
+                    if opt == "liberate" then
                         flip_castle(c_idx)
                         change_state("castle_capture", {cursor=cursor, capturer=selected_unit, castle=c_idx})
                     else
+                        if opt == "siege" then
+                            reduce_castle(c_idx)
+                        end
                         selected_unit.exhausted = true
                         change_state("overworld", {cursor=cursor})
                     end
@@ -568,6 +566,11 @@ function create_phase_change()
                 (phase == "enemy") and 8 or 12,
                 8
             )
+        end,
+        exit = function()
+            if phase == "enemy" then
+                reinforcements()
+            end
         end
     }
 end

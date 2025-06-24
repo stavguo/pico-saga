@@ -176,7 +176,7 @@ function make_routes(V)
             local tile, next_tile = path[i], path[i + 1]
             local tx, ty, nx, ny = tile[1], tile[2], next_tile[1], next_tile[2]
             local dx, dy = nx - tx, ny - ty
-            local spr = abs(dx) > abs(dy) and 13 or 14
+            local spr = abs(dx) > abs(dy) and 16 or 17
             local has_north, has_south, has_east, has_west = false, false, false, false
             local ns = get_tiles_within_distance(vectoindex(tile), 1, function (idx)
                 return map_get(idx) == 2 or map_get(idx) == 6

@@ -1,22 +1,14 @@
 function create_unit(x, y, class, team, enemy_ai, exhausted)
-    return {
+    local unit = {
         x = x,
         y = y,
-        sprite = UNIT_STATS[class].Sprite,
         team = team,
         class = class,
-        HP = UNIT_STATS[class].HP,
-        Str = UNIT_STATS[class].Str,
-        Mag = UNIT_STATS[class].Mag,
-        Skl = UNIT_STATS[class].Skl,
-        Spd = UNIT_STATS[class].Spd,
-        Def = UNIT_STATS[class].Def,
-        Mdf = UNIT_STATS[class].Mdf,
-        Mov = UNIT_STATS[class].Mov,
-        Atr = UNIT_STATS[class].Atr,
         enemy_ai = enemy_ai,
         exhausted = exhausted
     }
+    for k,v in pairs(UNIT_STATS[class]) do unit[k] = v end
+    return unit
 end
 
 function generate_units(total_units)
@@ -205,7 +197,7 @@ function draw_unit_at(unit, map_idx, flashing)
         end
 
         -- Draw the unit's sprite at the specified position
-        spr(unit.sprite, x * 8, y * 8)
+        spr(unit.Sprite, x * 8, y * 8)
 
         -- Reset the palette to default after drawing
         pal()
@@ -234,4 +226,25 @@ function sort_enemy_turn_order()
     end
     
     return result
+end
+
+function reinforcements()
+    local opts = {}
+    for i, castle in pairs(CASTLES) do
+        if castle.hp > 0 and castle.team == "enemy" then add(opts, {i, castle}) end
+    end
+    if next(opts) then
+        SHUFFLE(opts)
+        local idx = opts[1][1]
+        local x, y = unpack(indextovec(idx))
+        -- Create random charge unit over selected castle
+        UNITS[idx] = create_unit(
+                        x,
+                        y,
+                        UNIT_MINS[flr(rnd(#UNIT_MINS))+1][1],
+                        "enemy",
+                        "Charge")
+        SUMMARY.enemies[2] += 1
+        reduce_castle(idx)
+    end
 end
