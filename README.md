@@ -13,7 +13,7 @@
     <a href="https://gustavo.zip/pico-saga/">
       <strong>Play it here!</strong>
       <br />
-      <img src="./images/demo.gif?raw=true" alt="Demo GIF" width="250">
+      <iframe src="https://giphy.com/embed/SggILpMXO7Xt6" width="480" height="264" style="" frameBorder="0" class="giphy-embed" allowFullScreen></iframe><p><a href="https://giphy.com/gifs/sblobbery-clbarrr-idzz-SggILpMXO7Xt6">via GIPHY</a></p>
     </a>
     <br />
     <a href="#gameplay">How to play</a>
