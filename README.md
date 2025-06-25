@@ -22,8 +22,6 @@
     <a href="https://github.com/stavguo/pico-saga/issues/new?labels=enhancement&template=feature-request---.md">Request Feature</a>
   </p>
 </div>
-![dog](https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExemVzMmV3N2gwZG42bXQweHRoZW9jaTJ2djcxYW52cGg1eGc0dzRxbiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/SggILpMXO7Xt6/giphy.gif)
-
 
 <!-- TABLE OF CONTENTS -->
 <details>
