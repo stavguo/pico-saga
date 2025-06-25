@@ -2,3 +2,4 @@ logs/seeds.txt
 logs/castles.txt
 logs/debug.txt
 copy.sh
+.DS_Store

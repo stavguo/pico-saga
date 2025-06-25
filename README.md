@@ -1,25 +1,20 @@
 <!-- Improved compatibility of back to top link: See: https://github.com/othneildrew/Best-README-Template/pull/73 -->
 <a id="readme-top"></a>
-<!--
-*** Thanks for checking out the Best-README-Template. If you have a suggestion
-*** that would make this better, please fork the repo and create a pull request
-*** or simply open an issue with the tag "enhancement".
-*** Don't forget to give the project a star!
-*** Thanks again! Now go create something AMAZING! :D
--->
 
-
-
-<!-- PROJECT LOGO -->
 <br />
 <div align="center">
-<h3 align="center">Pico-Saga</h3>
 
+<a href="https://github.com/stavguo/pico-saga">
+  <img src="images/title.svg" alt="Logo" width="240">
+</a>
   <p align="center">
     A tactical turn-based RPG featuring procedurally generated terrain.
     <br />
-    <a href="https://gustavo.zip/pico-saga/"><strong>Play it here! »</strong></a>
-    <br />
+    <a href="https://gustavo.zip/pico-saga/">
+      <strong>Play it here!</strong>
+      <br />
+      <img src="images/demo.gif" alt="Demo GIF" width="250">
+    </a>
     <br />
     <a href="#gameplay">How to play</a>
     &middot;
@@ -36,12 +31,18 @@
   <summary>Table of Contents</summary>
   <ol>
     <li><a href="#overview">Overview</a></li>
-    <li><a href="#gameplay">Gameplay</a></li>
+    <li>
+      <a href="#gameplay">Gameplay</a>
+      <ul>
+        <li><a href="#controls">Controls</a></li>
+      </ul>
+    </li>
     <li>
       <a href="#mechanics">Mechanics</a>
       <ul>
-        <li><a href="#units">Units</a></li>
-        <li><a href="#terrain">Terrain</a></li>
+        <li><a href="#unit-movement">Unit Movement</a></li>
+        <li><a href="#combat-resolution">Combat Resolution</a></li>
+        <li><a href="#sieging-castles">Sieging Castles</a></li>
       </ul>
     </li>
     <li><a href="#time-complexity-analysis">Time Complexity Analysis</a></li>
@@ -62,11 +63,11 @@ Pico-Saga delivers [Fire Emblem](https://en.wikipedia.org/wiki/Fire_Emblem)-styl
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 ## Gameplay
-The player and enemy take turns moving their units across the map, either engaging in combat or sieging castles. To win, the player must liberate all castles from enemy control. Some enemies stand guard, while others actively push to capture the player’s castles. Losing every castle results in defeat.
-
-The combat system is turn-based, with outcomes heavily influenced by a rock-paper-scissors-like weapon matchup system. Careful positioning and favorable engagements provide an edge, but the player should expect to lose a few units in battles.
-
-Fortunately, liberated castles provide new units to keep the advance going. Conversely, enemy reinforcements may deploy from their castles, forcing the player to balance aggression with caution.
+The player and enemy take turns moving units across a grid-based map to liberate castles or engage in combat. Victory requires capturing all enemy castles, but losing all your own results in defeat.
+- Phases: Player and AI alternate turns, moving all units once per phase.
+- Combat: Rock-paper-scissors weapon matchups and positioning determine outcomes.
+- Reinforcements: Liberated castles provide new units; enemy castles spawn reinforcements.
+- Permadeath: Units lost in battle are gone forever—caution is key!
 
 ### Controls
 | Context       | Arrow Keys               | `C` Key                  | `X` Key                |
@@ -75,42 +76,39 @@ Fortunately, liberated castles provide new units to keep the advance going. Conv
 | **Castle**    | Move cursor/deploy selected unit  | Select unit              | Exit castle view       |
 | **Movement**  | Move unit      | Confirm destination      | Cancel movement        |
 | **Menu**      | Navigate options         | Select option           | Back/Exit menu        |
-
-
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 ## Mechanics
-The game begins in the player’s phase, where the player uses the direction arrows to move a cursor on the map. Selecting a castle reveals the units inside. Pressing “C” while hovering over a unit displays their stats and movement range. To deselect a unit, exit a castle, or open the pause menu, press “X”. To deploy a unit, press any arrow key while it’s selected.
+### Unit Movement
+- Movement Cost: Each terrain type has a movement cost (e.g., roads cost 0.5, thickets cost 4).
+- Movement (`Mov`): Units move a set number of tiles per turn, modified by terrain costs (e.g., forests slow movement).
 
-Each phase allows the player or enemy AI to move every unit once across the grid-based map. To move, select a unit and press the d-pad to enter the move menu. Units can move anywhere within their range, which is determined by terrain (each tile has a movement cost). Units with higher Mov stats travel farther per turn.
+### Combat Resolution
+- Weapon Triangle: Grants advantaged unit with +20% accuracy.
+  | Unit Type | Strong Against       |
+  |-----------|----------------------|
+  | Sword     | Axe                  |
+  | Axe       | Lance                |
+  | Lance     | Sword                |
+  | Monk      | Archer, Mage, Thief  |
+- Break Mechanic: Attacking with a advantaged weapon (e.g., axe vs. lance) breaks the enemy, blocking their counterattack.
+- Terrain: The terrain a unit occupies affects evasion (e.g., forests grant +10% evasion).
+  | Terrain Type | Movement Cost | Avoid Bonus |
+  |--------------|---------------|-------------|
+  | Road         | 0.5           | 0           |
+  | Bridge       | 0.5           | -10         |
+  | Plains       | 1             | 0           |
+  | Forest       | 2             | +20         |
+  | Shoal        | 4             | +10         |
+  | Thicket      | 4             | +30         |
+  | Sea          | *N/A*         | +20         |
+  | Mountain     | *N/A*         | +20         |
 
-Press “C” to confirm movement, then choose to stand by, attack a nearby unit, or siege an adjacent enemy castle. Combat resolves automatically, factoring in unit stats, terrain effects, and luck.
-
-To siege an enemy castle, position a player unit adjacent to it. The red pixels on the castle indicate remaining enemy reinforcements. Each turn, continuing the siege eliminates one reinforcement. Once all are removed, any adjacent player unit can liberate the castle—progressing the player toward victory and granting new deployable units.
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-### Units
-| Unit Type | Strong Against       |
-|-----------|----------------------|
-| Sword     | Axe                  |
-| Axe       | Lance                |
-| Lance     | Sword                |
-| Monk      | Archer, Mage, Thief  |
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-### Terrain
-| Terrain Type | Movement Cost | Avoid Bonus |
-|--------------|---------------|-------------|
-| Road         | 0.5           | 0           |
-| Bridge       | 0.5           | -10         |
-| Plains       | 1             | 0           |
-| Forest       | 2             | +20         |
-| Shoal        | 4             | +10         |
-| Thicket      | 4             | +30         |
-| Sea          | *N/A*         | +20         |
-| Mountain     | *N/A*         | +20         |
+### Sieging Castles
+- Reinforcements: Red pixels = remaining enemy units.
+- Siege for 1 turn → destroy 1 reinforcement.
+- Liberate when reinforcements reach 0.
+- Deployment: Liberated castles let you deploy new units at the start of your phase.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
