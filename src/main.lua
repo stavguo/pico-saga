@@ -11,7 +11,7 @@ function change_state(name, payload)
 end
 
 function _init()
-    printh("", "logs/debug.txt", true)
+    -- printh("", "logs/debug.txt", true)
     CASTLES, UNITS, SUMMARY = {}, {}, {
         phases = 0,
         enemies = {0, 0},

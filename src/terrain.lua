@@ -152,18 +152,11 @@ function kruskals(V)
             dsu_union(dsu, x, y)
             add(mst_edges, {x, y})  -- Store the edge
             local vx, vy = indextovec(x), indextovec(y)
-            printh("adding {"..vx[1]..","..vx[2].."} -> {"..vy[1]..","..vy[2].."} to MST", "logs/debug.txt")
             count += 1
             if count == #V - 1 then
                 break  -- MST is complete
             end
         end
-    end
-
-    if #sorted_edges > 0 then
-        local l_edge = sorted_edges[1]
-        local lx, ly = indextovec(l_edge[1][1]), indextovec(l_edge[1][2])
-        printh("Longest edge was {"..lx[1]..","..lx[2].."} -> {"..ly[1]..","..ly[2].."} with weight: "..l_edge[2], "logs/debug.txt")
     end
 
     return mst_edges

@@ -12,9 +12,7 @@ function create_setup_state()
         
                 init_terrain(noise_fn, tree_fn)
                 local cursor = init_castles()
-                if not cursor then
-                    printh("CURSOR IS NULL ERROR", "logs/debug.txt")
-                else
+                if cursor then
                     init_player_units(cursor)
                     init_enemy_units()
                     yield()
@@ -25,7 +23,6 @@ function create_setup_state()
             end)
             local active, exception = coresume(co)
             if exception then
-                printh(trace(co, exception), "logs/debug.txt")
                 stop(trace(co, exception))
             end
         end,
@@ -34,16 +31,16 @@ function create_setup_state()
         end,
         draw = function()
             if step == 0 then
-                print("v0.5.0-alpha", peek2(0x5f28) + 1, peek2(0x5f2a) + 1, 7)
+                print("v1.0", peek2(0x5f28) + 1, peek2(0x5f2a) + 1, 7)
                 sspr( (42 % 16) * 8, (42 \ 16) * 8, 16 * 3, 16, peek2(0x5f28) + 1, peek2(0x5f2a) + 12, 32 * 3, 32)
                 draw_centered_text(t() % 0.5 < 0.4 and "press ❎ to start " or "press    to start", 7, 65)
                 draw_centered_text("★ 2025, stavguo ", 7, 120)
             elseif step == 1 then
                 draw_centered_text("victory:", 12, 36)
-                draw_centered_text("LIBERATE ALL ENEMY CASTLES", 7, 43)
+                draw_centered_text("liberate all enemy castles", 7, 43)
                 draw_centered_text("defeat:", 8, 57)
-                draw_centered_text("STOP THE ENEMY FROM", 7, 64)
-                draw_centered_text("CAPTURING ALL YOUR CASTLES", 7, 71)
+                draw_centered_text("stop the enemy from", 7, 64)
+                draw_centered_text("capturing all your castles", 7, 71)
                 draw_centered_text(t() % 0.5 < 0.4 and "press ❎ to continue " or "press    to continue", 7, 85)
             end
         end

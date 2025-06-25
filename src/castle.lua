@@ -98,7 +98,6 @@ function init_castles()
     end
     local edges = generate_edges(places)
     if #places < 2 or edges[1][2] < 20 then
-        printh("NEED TO RESET", "logs/debug.txt")
         reset()
         CASTLES, UNITS, places = {}, {}, {}
         change_state("setup")
