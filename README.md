@@ -13,7 +13,6 @@
     <a href="https://gustavo.zip/pico-saga/">
       <strong>Play it here!</strong>
       <br />
-      <img src="https://github.com/user-attachments/assets/115d1d68-0690-47e8-86ff-706f21139f7f" alt="Demo GIF" width="250">
     </a>
     <br />
     <a href="#gameplay">How to play</a>
@@ -23,6 +22,7 @@
     <a href="https://github.com/stavguo/pico-saga/issues/new?labels=enhancement&template=feature-request---.md">Request Feature</a>
   </p>
 </div>
+![demo](https://github.com/user-attachments/assets/b207347f-8cc0-4802-9dd2-f16a272950b4)
 
 
 
