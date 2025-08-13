@@ -2,7 +2,8 @@ function create_unit_info(unit, ui)
     create_ui({
         unit.team.." "..unit.class,
         "HP:" .. unit.HP .. " Mov:" .. unit.Mov,
-        (unit.team == "enemy" and "AI:" .. unit.enemy_ai or nil)
+        "Str:" .. unit.Str .. " Mag:" .. unit.Mag,
+        "Def:" .. unit.Def .. " Mdf:" .. unit.Mdf
     }, ui)
 end
 
