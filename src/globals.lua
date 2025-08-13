@@ -103,6 +103,16 @@ function insert(tbl, val, p)
     end
 end
 
+function get_min_key(units_map)
+    local min_key = nil
+    for pos, _ in pairs(units_map) do
+        if min_key == nil or pos < min_key then
+            min_key = pos
+        end
+    end
+    return min_key
+end
+
 function reverse(tbl)
     for i=1,(#tbl/2) do
         local temp = tbl[i]

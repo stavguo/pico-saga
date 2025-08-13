@@ -115,7 +115,13 @@ function create_castle_state()
     local selected_unit, castle, pos, cursor, ui
     return {
         enter = function(p)
-            castle, pos, cursor, ui, selected_unit = p.castle, p.pos, p.pos, {}
+            castle, pos, ui, selected_unit = p.castle, p.pos, {}
+            local min_pos = get_min_key(castle.units)
+            if min_pos then
+                cursor = min_pos
+            else
+                cursor = p.pos
+            end
         end,
         update = function()
             if btnp(0) or btnp(1) or btnp(2) or btnp(3) then
