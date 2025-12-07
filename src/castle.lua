@@ -115,21 +115,13 @@ function init_castles()
     return cursor
 end
 
--- Draw the interior of a castle
 function draw_castle_interior()
-    for y = 0, 15 do
-        for x = 0, 15 do
-            if x == 0 or x == 15 then
-                if y == 0 or y == 15 then
-                    spr(13, x * 8, y * 8)
-                else
-                    spr(14, x * 8, y * 8)
-                end
-            else
-                spr(15, x * 8, y * 8)
-            end
-        end
-    end
+    map(16,0,0,0)
+    color(1)
+    line(48,17,79,17)
+    line(48,19,79,19)
+    line(48,19,48,0)
+    line(79,19,79,0)
 end
 
 function check_for_castle(t_idx, is_enemy_turn)

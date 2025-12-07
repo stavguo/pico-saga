@@ -67,16 +67,6 @@ WEAPON_TRIANGLE = {
     ["Monk"] = {"Archer", "Mage", "Thief"}
 }
 
-local UNIT_MINS = {
-    {"Lance", 3},
-    {"Axe", 3},
-    {"Sword", 3},
-    {"Archer", 2},
-    {"Mage", 2},
-    {"Thief", 1},
-    {"Monk", 1},
-}
-
 function SHUFFLE(items)
     for i = #items, 2, -1 do
         local j = flr(rnd(i)) + 1
@@ -111,6 +101,14 @@ function get_min_key(units_map)
         end
     end
     return min_key
+end
+
+function get_keys(t)
+    local keys = {}
+    for key, _ in pairs(t) do
+        add(keys, key)
+    end
+    return keys
 end
 
 function reverse(tbl)

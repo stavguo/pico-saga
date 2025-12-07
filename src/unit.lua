@@ -11,25 +11,6 @@ function create_unit(x, y, class, team, enemy_ai, exhausted)
     return unit
 end
 
-function generate_units(total_units)
-    -- Create base units list with guaranteed counts
-    local types = {}
-    for _,v in pairs(UNIT_MINS) do
-      for i=1,v[2] do
-        add(types, v[1])
-      end
-    end
-
-    -- Distribute remaining units randomly
-    for i=1,total_units - #types do
-        local r = flr(rnd(#UNIT_MINS)) + 1
-        add(types, UNIT_MINS[r][1])
-    end
-
-    SHUFFLE(types)
-    return types
-end
-
 function move_unit(u, new_idx, old_idx)
     if CASTLES[old_idx] then
         CASTLES[old_idx].units[vectoindex({u.x,u.y})]=nil
@@ -57,34 +38,75 @@ function get_neighbors(idx,f)
     return n
 end
 
-function init_player_units(cursor)
-    local player_classes, actual = generate_units(42), 1
+function get_random_class()
+    local player_classes = get_keys(UNIT_STATS)
+    return player_classes[flr(rnd(#player_classes)) + 1]
+end
 
-    for i, castle in pairs(CASTLES) do
-        -- Place leader
-        if i == cursor then
-            local throne = rnd(1) < 0.5 and 7 or 8
-            castle.units[vectoindex({throne,1})] = create_unit(throne, 1, player_classes[actual], "player", nil, false)
-            SUMMARY.players[2] += 1
-            actual += 1
-        end
-
-        -- Place units in formation
-        for j = 0, (i == cursor and 7 or 3) do
-            local row, pos = j \ 4, j % 4
-            local is_right = pos >= 2
-            local x = is_right and (11 + (pos - 2) * 2) or (2 + pos * 2)
-            local y = 2 + row * 2
-            castle.units[vectoindex({x,y})] = create_unit(x, y, player_classes[actual], "player", nil, (i ~= cursor and true or false))
-            SUMMARY.players[2] += 1
-            actual += 1
-        end
+function populate_player_castle(castle, num_units)
+    for i = 1, num_units do
+        local row, pos = i \ 2, i % 2
+        local is_left = pos == 1
+        local x = is_left and 5 or 10
+        local y = row * 2 + (is_left and 3 or 1)
+        
+        castle.units[vectoindex({x,y})] = create_unit(x, y, get_random_class(), "player", nil, false)
+        SUMMARY.players[2] += 1
     end
 end
 
-function init_enemy_units()
+function init_player_units(cursor)
+    local num_enemy_castles, units_per_castle, player_castle = 0, 2
+    for i, castle in pairs(CASTLES) do
+        if i == cursor then
+            player_castle = castle
+        else
+            num_enemy_castles = num_enemy_castles + 1
+        end
+    end
+
+    local throne = rnd(1) < 0.5 and 7 or 8
+    player_castle.units[vectoindex({throne,1})] = create_unit(throne, 1, get_random_class(), "player", nil, false)
+    SUMMARY.players[2] += 1
+    
+    populate_player_castle(player_castle, units_per_castle * num_enemy_castles)
+end
+
+function count_player_units(units)
+    local counts = {}
+    for i, unit in pairs(units) do
+        if unit.team == "player" then
+            counts[unit.class] = (counts[unit.class] or 0) + 1
+        end
+    end
+    return counts
+end
+
+function find_majority_class(counts)
+    local majority_class, max_count = "", 0
+    for class, count in pairs(counts) do
+        if count > max_count then
+            majority_class, max_count = class, count
+        end
+    end
+    return majority_class
+end
+
+function get_counter_class(mc)
+    if mc == "Archer" or mc == "Mage" or mc == "Thief" then
+        local non_monk_classes = {"Sword", "Axe", "Lance", "Archer", "Mage", "Thief"}
+        return non_monk_classes[flr(rnd(#non_monk_classes)) + 1]
+    end
+    
+    local counters = WEAPON_TRIANGLE[mc]
+    if counters then
+        return counters[flr(rnd(#counters)) + 1]
+    end
+end
+
+function init_enemy_units(cursor)
     for castle_idx, castle in pairs(CASTLES) do
-        if castle.team == "enemy" then  -- Only place units around enemy castles
+        if castle.team == "enemy" then
             -- Find traversable tiles around the castle within the specified movement distance
             local traversable_tiles = find_traversable_tiles(castle_idx, 4)
             local filtered_tiles = {}
@@ -94,22 +116,27 @@ function init_enemy_units()
                 end
             end
 
-            -- Shuffle the list of tiles
             SHUFFLE(filtered_tiles)
 
-            -- Calculate the number of units to place around this castle
             for i = 1, 2 do
-
-                -- Get a random tile from the shuffled list
                 if i <= #filtered_tiles then
                     local tileIdx = filtered_tiles[i]
                     local pos = indextovec(tileIdx)
+                    local unit_class
+                    if rnd(1) < 0.5 then
+                        local counts = count_player_units(CASTLES[cursor].units)
+                        local majority = find_majority_class(counts)
+                        printh("majority unit: "..majority, "logs/debug.txt")
+                        unit_class = get_counter_class(majority)
+                        printh("good matchup made: "..unit_class, "logs/debug.txt")
+                    else
+                        unit_class = get_random_class()
+                    end
 
-                    -- Create the unit at the selected position
                     UNITS[tileIdx] = create_unit(
                         pos[1],
                         pos[2],
-                        UNIT_MINS[flr(rnd(#UNIT_MINS))+1][1],
+                        unit_class,
                         "enemy",
                         ({"Charge","Range"})[flr(rnd(2))+1])
                         SUMMARY.enemies[2] += 1
@@ -241,7 +268,7 @@ function reinforcements()
         UNITS[idx] = create_unit(
                         x,
                         y,
-                        UNIT_MINS[flr(rnd(#UNIT_MINS))+1][1],
+                        get_random_class(),
                         "enemy",
                         "Charge")
         SUMMARY.enemies[2] += 1

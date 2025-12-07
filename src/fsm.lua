@@ -8,13 +8,14 @@ function create_setup_state()
                 if not _seeds_initialized then
                     _seeds_initialized = true
                 end
+                printh("", "logs/debug.txt", true)
                 local noise_fn, tree_fn = os2d_noisefn(seed), os2d_noisefn(treeseed)
         
                 init_terrain(noise_fn, tree_fn)
                 local cursor = init_castles()
                 if cursor then
                     init_player_units(cursor)
-                    init_enemy_units()
+                    init_enemy_units(cursor)
                     yield()
                     step = 1
                     yield()
@@ -79,7 +80,7 @@ function create_overworld_state()
             if btnp(4) then
                 ui = {}
                 local castle, unit = CASTLES[cursor], UNITS[cursor]
-                if castle then
+                if castle and castle.team == "player" then
                     change_state("castle", {castle=castle, pos=cursor})
                 elseif unit then
                     selected_unit = unit
@@ -363,6 +364,7 @@ function create_combat_state()
                 attacker.exhausted = true
                 if attacker.team == "enemy" then
                     change_state("enemy_phase", {cursor=cursor})
+                    if SUMMARY.players[1] == SUMMARY.players[2] then change_state("game_over", {win=false}) end
                 else
                     change_state("overworld", {cursor=cursor})
                 end
@@ -601,6 +603,12 @@ function create_castle_capture_state()
                 if game_over then
                     change_state("game_over", {win=capturer.team=="player"})
                 else
+                    -- local pl, en = (SUMMARY.players[2] - SUMMARY.players[1]), (SUMMARY.enemies[2] - SUMMARY.enemies[1])
+                    -- printh("pl: "..pl.."en: "..en, "logs/debug.txt")
+                    -- if capturer.team == "player" and pl < en then
+                    --     populate_player_castle(castle, en - pl)
+                    --     printh("units lost:"..SUMMARY.players[1].."/"..SUMMARY.players[2], "logs/debug.txt")
+                    -- end
                     change_state(capturer.team == "enemy" and "enemy_phase" or "overworld", {cursor=cursor})
                 end
             end
