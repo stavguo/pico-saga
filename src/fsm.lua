@@ -24,6 +24,7 @@ function create_setup_state()
             end)
             local active, exception = coresume(co)
             if exception then
+                printh("Error: "..exception, "logs/debug.txt")
                 stop(trace(co, exception))
             end
         end,

@@ -12,11 +12,7 @@ function create_unit(x, y, class, team, enemy_ai, exhausted)
 end
 
 function move_unit(u, new_idx, old_idx)
-    if CASTLES[old_idx] then
-        CASTLES[old_idx].units[vectoindex({u.x,u.y})]=nil
-    else
-        UNITS[vectoindex({u.x,u.y})]=nil
-    end
+    UNITS[vectoindex({u.x,u.y})]=nil
     u.x,u.y=unpack(indextovec(new_idx))
     UNITS[new_idx]=u
 end
@@ -43,18 +39,6 @@ function get_random_class()
     return player_classes[flr(rnd(#player_classes)) + 1]
 end
 
-function populate_player_castle(castle, num_units)
-    for i = 1, num_units do
-        local row, pos = i \ 2, i % 2
-        local is_left = pos == 1
-        local x = is_left and 5 or 10
-        local y = row * 2 + (is_left and 3 or 1)
-        
-        castle.units[vectoindex({x,y})] = create_unit(x, y, get_random_class(), "player", nil, false)
-        SUMMARY.players[2] += 1
-    end
-end
-
 function init_player_units(cursor)
     local num_enemy_castles, units_per_castle, player_castle = 0, 2
     for i, castle in pairs(CASTLES) do
@@ -65,11 +49,13 @@ function init_player_units(cursor)
         end
     end
 
-    local throne = rnd(1) < 0.5 and 7 or 8
-    player_castle.units[vectoindex({throne,1})] = create_unit(throne, 1, get_random_class(), "player", nil, false)
-    SUMMARY.players[2] += 1
-    
-    populate_player_castle(player_castle, units_per_castle * num_enemy_castles)
+    local filtered_tiles, unit_count = tiles_near_castle(cursor, 4), units_per_castle * num_enemy_castles + 3
+    for i = 1, unit_count do
+        local tile_idx = filtered_tiles[i]
+        local x, y = unpack(indextovec(tile_idx))
+        UNITS[tile_idx]=create_unit(x, y, get_random_class(), "player", nil, false)
+        SUMMARY.players[2] += 1
+    end
 end
 
 function count_player_units(units)
@@ -104,19 +90,25 @@ function get_counter_class(mc)
     end
 end
 
+function tiles_near_castle(castle_idx, distance_from)
+    local traversable_tiles = find_traversable_tiles(castle_idx, distance_from)
+    local filtered_tiles = {}
+    for k, _ in pairs(traversable_tiles) do
+        if map_get(k) == 1 then
+            add(filtered_tiles, k)
+        end
+    end
+    SHUFFLE(filtered_tiles)
+    return filtered_tiles
+end
+
 function init_enemy_units(cursor)
+    local counts = count_player_units(UNITS)
+    local majority = find_majority_class(counts)
+    printh("majority unit: "..majority, "logs/debug.txt")
     for castle_idx, castle in pairs(CASTLES) do
         if castle.team == "enemy" then
-            -- Find traversable tiles around the castle within the specified movement distance
-            local traversable_tiles = find_traversable_tiles(castle_idx, 4)
-            local filtered_tiles = {}
-            for k, _ in pairs(traversable_tiles) do
-                if map_get(k) == 1 then
-                    add(filtered_tiles, k)
-                end
-            end
-
-            SHUFFLE(filtered_tiles)
+            local filtered_tiles = tiles_near_castle(castle_idx, 4)
 
             for i = 1, 2 do
                 if i <= #filtered_tiles then
@@ -124,9 +116,6 @@ function init_enemy_units(cursor)
                     local pos = indextovec(tileIdx)
                     local unit_class
                     if rnd(1) < 0.5 then
-                        local counts = count_player_units(CASTLES[cursor].units)
-                        local majority = find_majority_class(counts)
-                        printh("majority unit: "..majority, "logs/debug.txt")
                         unit_class = get_counter_class(majority)
                         printh("good matchup made: "..unit_class, "logs/debug.txt")
                     else
