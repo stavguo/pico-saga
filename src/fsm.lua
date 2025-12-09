@@ -14,7 +14,7 @@ function create_setup_state()
                 init_terrain(noise_fn, tree_fn)
                 local cursor = init_castles()
                 if cursor then
-                    init_player_units(cursor)
+                    init_player_units(cursor, 2 * (tablelength(CASTLES) - 1) + 3)
                     init_enemy_units(cursor)
                     yield()
                     step = 1

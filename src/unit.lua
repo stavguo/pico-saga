@@ -39,18 +39,9 @@ function get_random_class()
     return player_classes[flr(rnd(#player_classes)) + 1]
 end
 
-function init_player_units(cursor)
-    local num_enemy_castles, units_per_castle, player_castle = 0, 2
-    for i, castle in pairs(CASTLES) do
-        if i == cursor then
-            player_castle = castle
-        else
-            num_enemy_castles = num_enemy_castles + 1
-        end
-    end
-
-    local filtered_tiles, unit_count = tiles_near_castle(cursor, 4), units_per_castle * num_enemy_castles + 3
-    for i = 1, unit_count do
+function init_player_units(cursor, num)
+    local filtered_tiles = tiles_near_castle(cursor, 3)
+    for i = 1, num do
         local tile_idx = filtered_tiles[i]
         local x, y = unpack(indextovec(tile_idx))
         UNITS[tile_idx]=create_unit(x, y, get_random_class(), "player", nil, false)
@@ -91,15 +82,12 @@ function get_counter_class(mc)
 end
 
 function tiles_near_castle(castle_idx, distance_from)
-    local traversable_tiles = find_traversable_tiles(castle_idx, distance_from)
-    local filtered_tiles = {}
-    for k, _ in pairs(traversable_tiles) do
-        if map_get(k) == 1 then
-            add(filtered_tiles, k)
-        end
-    end
-    SHUFFLE(filtered_tiles)
-    return filtered_tiles
+    local traversable_tiles = find_traversable_tiles(castle_idx, distance_from, function (idx)
+        return UNITS[idx] == nil and TERRAIN_COSTS[map_get(idx)]
+    end)
+    traversable_tiles = get_keys(traversable_tiles)
+    SHUFFLE(traversable_tiles)
+    return traversable_tiles
 end
 
 function init_enemy_units(cursor)
