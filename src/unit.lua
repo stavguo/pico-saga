@@ -85,6 +85,7 @@ function tiles_near_castle(castle_idx, distance_from)
     local traversable_tiles = find_traversable_tiles(castle_idx, distance_from, function (idx)
         return UNITS[idx] == nil and TERRAIN_COSTS[map_get(idx)]
     end)
+    traversable_tiles[castle_idx] = nil
     traversable_tiles = get_keys(traversable_tiles)
     SHUFFLE(traversable_tiles)
     return traversable_tiles

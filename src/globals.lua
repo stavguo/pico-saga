@@ -17,9 +17,9 @@ TERRAIN_COSTS = {
     [3] = 2 , -- FOREST
     [4] = 4 , -- THICKET
     [2] = 4 , -- SHOAL
-    [5] = 0.5, -- ROAD
-    [16] = 0.5, -- BRIDGE
-    [17] = 0.5 -- BRIDGE
+    [5] = 1, -- ROAD
+    [16] = 1, -- BRIDGE
+    [17] = 1 -- BRIDGE
 }
 
 -- Terrain Effects on Hit Rate
